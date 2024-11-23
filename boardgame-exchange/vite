@@ -1,0 +1,23 @@
+
+
+  VITE v5.4.11  ready in 298 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+Error: EACCES: permission denied, mkdir '/Users/alekskonopacki/Desktop/Projects/BoardGamesExchange/boardgame-exchange/node_modules/.vite/deps_temp_5a8ab054'
+    at Object.mkdirSync (node:fs:1391:3)
+    at runOptimizeDeps (file:///Users/alekskonopacki/Desktop/Projects/BoardGamesExchange/boardgame-exchange/node_modules/vite/dist/node/chunks/dep-CB_7IfJ-.js:50713:15)
+    at file:///Users/alekskonopacki/Desktop/Projects/BoardGamesExchange/boardgame-exchange/node_modules/vite/dist/node/chunks/dep-CB_7IfJ-.js:50186:34
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+22:31:41 [vite] error while updating dependencies:
+Error: EACCES: permission denied, mkdir '/Users/alekskonopacki/Desktop/Projects/BoardGamesExchange/boardgame-exchange/node_modules/.vite/deps_temp_d9f25183'
+    at Object.mkdirSync (node:fs:1391:3)
+    at runOptimizeDeps (file:///Users/alekskonopacki/Desktop/Projects/BoardGamesExchange/boardgame-exchange/node_modules/vite/dist/node/chunks/dep-CB_7IfJ-.js:50713:15)
+    at runOptimizer (file:///Users/alekskonopacki/Desktop/Projects/BoardGamesExchange/boardgame-exchange/node_modules/vite/dist/node/chunks/dep-CB_7IfJ-.js:50237:30)
+    at rerun (file:///Users/alekskonopacki/Desktop/Projects/BoardGamesExchange/boardgame-exchange/node_modules/vite/dist/node/chunks/dep-CB_7IfJ-.js:50383:5)
+    at Timeout._onTimeout (file:///Users/alekskonopacki/Desktop/Projects/BoardGamesExchange/boardgame-exchange/node_modules/vite/dist/node/chunks/dep-CB_7IfJ-.js:50439:9)
+    at listOnTimeout (node:internal/timers:569:17)
+    at process.processTimers (node:internal/timers:512:7)
+
+clear
