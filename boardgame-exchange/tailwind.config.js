@@ -5,6 +5,11 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        'medieval': ['MedievalSharp', 'cursive'],     
+        'cinzel': ['Cinzel', 'serif'],              
+        'crimson': ['Crimson Text', 'serif'],        
+      },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
       },

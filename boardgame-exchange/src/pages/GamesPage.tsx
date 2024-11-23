@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import GameCard from '../components/GameCard';
 import { Game } from '../types/game';
-import { Search, Filter } from 'lucide-react'; // Usunięto nieużywaną ikonę SlidersHorizontal
+import { Search, Filter } from 'lucide-react';
 
 const MOCK_GAMES: Game[] = [
   {
@@ -29,18 +29,18 @@ const GamesPage: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   const handleGameClick = (game: Game) => {
-    // Implementacja szczegółów gry
     console.log('Game clicked:', game);
   };
 
   return (
-    <div className="min-h-screen bg-rpg-dark text-white">
-      {/* Hero section */}
+    <div className="min-h-screen bg-[#1a0f0f] text-amber-100">
+  
       <div className="relative h-64 bg-cover bg-center" 
-           style={{ backgroundImage: 'url("/images/games-hero.jpg")' }}>
+           style={{ backgroundImage: 'url("/images/skull-candle-arrangement-still-life.jpg")' }}>
         <div className="absolute inset-0 bg-black/50" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-center">
+          <h1 className="font-medieval text-4xl md:text-5xl lg:text-6xl font-bold text-center 
+                        text-amber-100 tracking-wider text-shadow-lg">
             Available Games
           </h1>
         </div>
@@ -50,23 +50,28 @@ const GamesPage: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-amber-500" />
             <input
               type="text"
-              placeholder="Search games..."
+              placeholder="Search for mystical games..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-700 rounded-lg
-                         focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 bg-[#2c1810] border border-amber-900/50 rounded-lg
+                         text-amber-100 placeholder-amber-700
+                         focus:ring-2 focus:ring-amber-500 focus:border-transparent
+                         font-cinzel transition-all duration-200"
             />
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-900 rounded-lg
-                       hover:bg-amber-800 transition-colors"
+            className="font-medieval flex items-center gap-2 px-6 py-3 
+                       bg-gradient-to-r from-amber-900 to-amber-800
+                       hover:from-amber-800 hover:to-amber-700
+                       text-amber-100 rounded-lg transition-all duration-300
+                       hover:shadow-lg hover:shadow-amber-900/50"
           >
             <Filter className="w-5 h-5" />
-            Filters
+            Magic Filters
           </button>
         </div>
 
@@ -76,44 +81,48 @@ const GamesPage: React.FC = () => {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="mb-8 p-4 bg-gray-900 rounded-lg"
+            className="mb-8 p-6 bg-[#2c1810] rounded-lg border border-amber-900/30
+                      shadow-lg backdrop-blur-sm"
           >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Filtry */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Category
+              <div className="space-y-3">
+                <label className="font-medieval block text-sm text-amber-200">
+                  Category of Magic
                 </label>
-                <select className="w-full p-2 bg-gray-800 rounded-lg border border-gray-700">
+                <select className="w-full p-3 bg-[#1a0f0f] rounded-lg border border-amber-900/50
+                                 text-amber-100 font-cinzel focus:ring-2 focus:ring-amber-500">
                   <option value="">All Categories</option>
-                  <option value="rpg">RPG</option>
-                  <option value="strategy">Strategy</option>
-                  <option value="card">Card Games</option>
+                  <option value="rpg">RPG Legends</option>
+                  <option value="strategy">Strategic Battles</option>
+                  <option value="card">Mystical Cards</option>
                 </select>
               </div>
               
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Difficulty
+              <div className="space-y-3">
+                <label className="font-medieval block text-sm text-amber-200">
+                  Quest Difficulty
                 </label>
-                <select className="w-full p-2 bg-gray-800 rounded-lg border border-gray-700">
-                  <option value="">All Difficulties</option>
-                  <option value="easy">Easy</option>
-                  <option value="medium">Medium</option>
-                  <option value="hard">Hard</option>
-                  <option value="expert">Expert</option>
+                <select className="w-full p-3 bg-[#1a0f0f] rounded-lg border border-amber-900/50
+                                 text-amber-100 font-cinzel focus:ring-2 focus:ring-amber-500">
+                  <option value="">All Challenges</option>
+                  <option value="easy">Novice</option>
+                  <option value="medium">Adept</option>
+                  <option value="hard">Master</option>
+                  <option value="expert">Legendary</option>
                 </select>
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Players
+              <div className="space-y-3">
+                <label className="font-medieval block text-sm text-amber-200">
+                  Party Size
                 </label>
-                <select className="w-full p-2 bg-gray-800 rounded-lg border border-gray-700">
-                  <option value="">Any Number</option>
-                  <option value="2">2 Players</option>
-                  <option value="3-4">3-4 Players</option>
-                  <option value="5+">5+ Players</option>
+                <select className="w-full p-3 bg-[#1a0f0f] rounded-lg border border-amber-900/50
+                                 text-amber-100 font-cinzel focus:ring-2 focus:ring-amber-500">
+                  <option value="">Any Party Size</option>
+                  <option value="2">Solo Duo</option>
+                  <option value="3-4">Small Party (3-4)</option>
+                  <option value="5+">Full Party (5+)</option>
                 </select>
               </div>
             </div>

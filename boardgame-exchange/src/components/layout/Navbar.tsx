@@ -29,7 +29,8 @@ const Navbar: React.FC = () => {
                  size={32} 
                  className="text-amber-500 transform group-hover:rotate-180 transition-transform duration-500" 
                />
-               <span className="text-xl font-bold text-amber-100 hover:text-amber-400 transition-colors">
+               <span className="font-medieval text-xl font-bold text-amber-100 hover:text-amber-400 
+                              transition-colors tracking-wider">
                  BoardGame Exchange
                </span>
              </Link>
@@ -39,16 +40,16 @@ const Navbar: React.FC = () => {
            <div className="hidden md:flex md:items-center md:space-x-8">
              <Link 
                to="/app/games"
-               className="text-amber-100 hover:text-amber-400 transition-colors flex items-center gap-2
-                        px-3 py-2 rounded-lg hover:bg-amber-900/30"
+               className="font-medieval text-amber-100 hover:text-amber-400 transition-colors 
+                        flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-amber-900/30"
              >
                <Dice1 size={20} />
                <span>Games</span>
              </Link>
              <Link 
                to="/app/exchange"
-               className="text-amber-100 hover:text-amber-400 transition-colors flex items-center gap-2
-                        px-3 py-2 rounded-lg hover:bg-amber-900/30"
+               className="font-medieval text-amber-100 hover:text-amber-400 transition-colors 
+                        flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-amber-900/30"
              >
                <Repeat size={20} />
                <span>Exchange</span>
@@ -58,8 +59,10 @@ const Navbar: React.FC = () => {
                <div className="relative">
                  <button
                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                   className="flex items-center gap-2 px-4 py-2 bg-amber-900/50 text-amber-100 
-                            rounded-lg hover:bg-amber-800 transition-all duration-200"
+                   className="font-medieval flex items-center gap-2 px-4 py-2 
+                            bg-gradient-to-r from-amber-900/50 to-amber-800/50 
+                            text-amber-100 rounded-lg hover:from-amber-800 hover:to-amber-700 
+                            transition-all duration-300"
                  >
                    <User size={20} />
                    <span>Profile</span>
@@ -80,7 +83,7 @@ const Navbar: React.FC = () => {
                      >
                        <Link
                          to="/app/profile"
-                         className="block px-4 py-2 text-sm text-amber-100 hover:bg-amber-900/50
+                         className="font-medieval px-4 py-2 text-sm text-amber-100 hover:bg-amber-900/50
                                   transition-colors flex items-center gap-2"
                        >
                          <User size={16} />
@@ -88,7 +91,7 @@ const Navbar: React.FC = () => {
                        </Link>
                        <button
                          onClick={() => {/* handle logout */}}
-                         className="w-full text-left px-4 py-2 text-sm text-amber-100 
+                         className="font-medieval w-full text-left px-4 py-2 text-sm text-amber-100 
                                   hover:bg-amber-900/50 transition-colors flex items-center gap-2"
                        >
                          <LogOut size={16} />
@@ -101,8 +104,10 @@ const Navbar: React.FC = () => {
              ) : (
                <button
                  onClick={() => setIsAuthModalOpen(true)}
-                 className="flex items-center gap-2 px-4 py-2 bg-amber-900 text-amber-100 
-                          rounded-lg hover:bg-amber-800 transition-all duration-200
+                 className="font-medieval flex items-center gap-2 px-4 py-2 
+                          bg-gradient-to-r from-amber-900 to-amber-800
+                          hover:from-amber-800 hover:to-amber-700 
+                          text-amber-100 rounded-lg transition-all duration-300
                           hover:shadow-lg hover:shadow-amber-900/50"
                >
                  <User size={20} />
@@ -137,7 +142,7 @@ const Navbar: React.FC = () => {
              <div className="px-2 pt-2 pb-3 space-y-1">
                <Link
                  to="/app/games"
-                 className="block px-3 py-2 rounded-lg text-amber-100 hover:bg-amber-900/50 
+                 className="font-medieval px-3 py-2 rounded-lg text-amber-100 hover:bg-amber-900/50 
                           transition-colors flex items-center gap-2"
                >
                  <Dice1 size={20} />
@@ -145,17 +150,17 @@ const Navbar: React.FC = () => {
                </Link>
                <Link
                  to="/app/exchange"
-                 className="px-3 py-2 rounded-lg text-amber-100 hover:bg-amber-900/50 
+                 className="font-medieval px-3 py-2 rounded-lg text-amber-100 hover:bg-amber-900/50 
                           transition-colors flex items-center gap-2"
                >
-                 {/* <Exchange size={20} />
-                 <span>Exchange</span> */}
+                 <Repeat size={20} />
+                 <span>Exchange</span>
                </Link>
                {isAuthenticated ? (
                  <>
                    <Link
                      to="/app/profile"
-                     className="block px-3 py-2 rounded-lg text-amber-100 hover:bg-amber-900/50 
+                     className="font-medieval px-3 py-2 rounded-lg text-amber-100 hover:bg-amber-900/50 
                               transition-colors flex items-center gap-2"
                    >
                      <User size={20} />
@@ -163,7 +168,7 @@ const Navbar: React.FC = () => {
                    </Link>
                    <button
                      onClick={() => {/* handle logout */}}
-                     className="w-full text-left px-3 py-2 rounded-lg text-amber-100 
+                     className="font-medieval w-full text-left px-3 py-2 rounded-lg text-amber-100 
                               hover:bg-amber-900/50 transition-colors flex items-center gap-2"
                    >
                      <LogOut size={20} />
@@ -176,8 +181,8 @@ const Navbar: React.FC = () => {
                      setIsAuthModalOpen(true);
                      setIsMenuOpen(false);
                    }}
-                   className="w-full px-3 py-2 rounded-lg text-amber-100 hover:bg-amber-900/50 
-                            transition-colors flex items-center gap-2"
+                   className="font-medieval w-full px-3 py-2 rounded-lg text-amber-100 
+                            hover:bg-amber-900/50 transition-colors flex items-center gap-2"
                  >
                    <User size={20} />
                    <span>Enter the Realm</span>

@@ -34,8 +34,9 @@ const GameCard: React.FC<GameCardProps> = ({ game, onClick }) => {
       </div>
 
       <div className="p-4">
-        <h3 className="text-xl font-bold text-amber-100 mb-2">{game.title}</h3>
-        <p className="text-gray-400 text-sm mb-4 line-clamp-2">
+      <h3 className="font-cinzel text-xl font-bold text-amber-100 mb-2">
+      {game.title}</h3>
+      <p className="font-crimson text-gray-400 text-sm mb-4 line-clamp-2">
           {game.description}
         </p>
 

@@ -10,6 +10,18 @@
 }
 
 @layer utilities {
+  .text-shadow-lg {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  }
+
+  .text-shadow-amber {
+    text-shadow: 
+      0 0 10px rgba(251, 191, 36, 0.3),
+      2px 2px 4px rgba(0, 0, 0, 0.5);
+  }
+}
+
+@layer utilities {
   .text-shadow {
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
   }
