@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Dice1, Repeat, User, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, X, Dice1, Repeat, User, LogOut, ChevronDown, PlusCircle } from 'lucide-react';
 import AuthModal from '../AuthModal';
 import ProfileModal from '../ProfileModal';
 
 interface ProfileData {
   avatarUrl?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 const Navbar: React.FC = () => {
@@ -15,10 +17,14 @@ const Navbar: React.FC = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [profileData] = useState<ProfileData>({});
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const navigate = useNavigate();
 
   const isAuthenticated = true;
+
+  const handleAddQuest = () => {
+    navigate('/app/games/add');
+    setIsMenuOpen(false);
+  };
 
   return (
     <>
@@ -54,6 +60,18 @@ const Navbar: React.FC = () => {
                 <Repeat size={20} />
                 <span>Exchange</span>
               </Link>
+
+              {/* Add Quest Button - tylko dla zalogowanych */}
+              {isAuthenticated && (
+                <button
+                  onClick={handleAddQuest}
+                  className="font-medieval text-amber-100 hover:text-amber-400 transition-colors 
+                           flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-amber-900/30"
+                >
+                  <PlusCircle size={20} />
+                  <span>Add Quest</span>
+                </button>
+              )}
               
               {isAuthenticated ? (
                 <div className="relative flex items-center gap-2">
@@ -67,7 +85,7 @@ const Navbar: React.FC = () => {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <User size={16} className="text-amber-500" />
+                      <User size={20} className="text-amber-500" />
                     )}
                   </div>
 
@@ -137,11 +155,26 @@ const Navbar: React.FC = () => {
               )}
             </div>
 
-            {/* Mobile menu button */}
-            <div className="md:hidden">
+            {/* Mobile menu button and Avatar */}
+            <div className="md:hidden flex items-center gap-3">
+              {/* Avatar */}
+              <div className="w-10 h-10 rounded-full bg-amber-900/30 border-2 border-amber-500/50
+                          flex items-center justify-center overflow-hidden">
+                {profileData?.avatarUrl ? (
+                  <img 
+                    src={profileData.avatarUrl} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User size={20} className="text-amber-500" />
+                )}
+              </div>
+
+              {/* Menu Button */}
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="text-amber-100 hover:text-amber-400 transition-colors"
+                className="text-amber-100 hover:text-amber-400 transition-colors p-2"
               >
                 {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
@@ -173,6 +206,15 @@ const Navbar: React.FC = () => {
                 >
                   Exchange
                 </Link>
+                {isAuthenticated && (
+                  <button
+                    onClick={handleAddQuest}
+                    className="w-full text-left px-3 py-2 rounded-md text-amber-100 
+                             hover:text-amber-400 hover:bg-amber-900/30 transition-colors"
+                  >
+                    Add Quest
+                  </button>
+                )}
                 {isAuthenticated ? (
                   <>
                     <button
