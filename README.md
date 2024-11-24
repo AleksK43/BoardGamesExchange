@@ -16,7 +16,7 @@ git config --global user.email "twoj@email.com"
 ## 2. Sklonowanie repozytorium
 
 ```bash
-git clone https://github.com/alekkowalczyk/boardgame-exchange.git
+git clone https://github.com/AleksK43/boardgame-exchange.git
 ```
 
 Gdy zostaniesz poproszony o hasło, użyj wygenerowanego tokenu zamiast hasła do GitHub.
