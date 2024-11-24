@@ -30,7 +30,7 @@ const HomePage: React.FC = () => {
           <h1 className="font-medieval text-5xl md:text-7xl lg:text-8xl font-bold text-amber-100 
                        tracking-wider transform hover:scale-105 transition-all duration-300 
                        text-shadow-lg hover:text-shadow-amber">
-            BOARD GAME EXCHANGE
+            BOARD BUDDIES
           </h1>
 
           <p className="font-cinzel text-xl md:text-2xl text-amber-200/80 max-w-3xl mx-auto 
