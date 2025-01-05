@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { PlusCircle, Trash2, Library } from 'lucide-react';
 import GameForm from './GameForm';
 import MyGames from './MyGames';
-import { PlusCircle, Trash2, Library } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import TrashGames from './TrashGames';
 
 interface GameFormData {
   title: string;
@@ -12,27 +12,10 @@ interface GameFormData {
   images: File[];
 }
 
-const AddGame: React.FC = () => {
-  const location = useLocation();
-  const currentPath = location.pathname;
+type ActiveView = 'add' | 'my-games' | 'trash';
 
-  const menuItems = [
-    {
-      title: 'Add Game',
-      icon: <PlusCircle size={20} />,
-      path: '/app/games/add'
-    },
-    {
-      title: 'My Games',
-      icon: <Library size={20} />,
-      path: '/app/games/my-games'
-    },
-    {
-      title: 'Trash',
-      icon: <Trash2 size={20} />,
-      path: '/app/games/trash'
-    }
-  ];
+const AddGame: React.FC = () => {
+  const [activeView, setActiveView] = useState<ActiveView>('add');
 
   const handleSubmit = async (data: GameFormData) => {
     try {
@@ -44,24 +27,40 @@ const AddGame: React.FC = () => {
   };
 
   const renderContent = () => {
-    switch (currentPath) {
-      case '/app/games/add':
+    switch (activeView) {
+      case 'add':
         return (
           <>
-            <h1 className="text-2xl font-medieval text-amber-100 mb-8">
-              Add New Game
-            </h1>
+            <h1 className="text-2xl font-medieval text-amber-100 mb-8">Add New Game</h1>
             <GameForm onSubmit={handleSubmit} />
           </>
         );
-      case '/app/games/my-games':
+      case 'my-games':
         return <MyGames />;
-      case '/app/games/trash':
-        return <h1 className="text-2xl font-medieval text-amber-100 mb-8">Kosz</h1>;
+      case 'trash':
+        return <TrashGames />;
       default:
         return null;
     }
   };
+
+  const menuItems = [
+    {
+      title: 'Add Game',
+      icon: <PlusCircle size={20} />,
+      view: 'add' as ActiveView
+    },
+    {
+      title: 'My Games',
+      icon: <Library size={20} />,
+      view: 'my-games' as ActiveView
+    },
+    {
+      title: 'Trash',
+      icon: <Trash2 size={20} />,
+      view: 'trash' as ActiveView
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1a0f0f] to-[#2c1810]">
@@ -69,19 +68,19 @@ const AddGame: React.FC = () => {
         {/* Menu Navigation */}
         <div className="flex flex-col sm:flex-row gap-4 mb-8">
           {menuItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
+            <button
+              key={item.view}
+              onClick={() => setActiveView(item.view)}
               className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-colors
                         font-medieval text-lg ${
-                          currentPath === item.path
+                          activeView === item.view
                             ? 'bg-amber-900/50 text-amber-100 border-2 border-amber-500/50'
                             : 'bg-amber-900/20 text-amber-400 hover:bg-amber-900/30 hover:text-amber-300'
                         }`}
             >
               {item.icon}
               <span>{item.title}</span>
-            </Link>
+            </button>
           ))}
         </div>
 

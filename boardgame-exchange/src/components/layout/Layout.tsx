@@ -1,17 +1,9 @@
-import React, { useEffect } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+// src/components/layout/Layout.tsx
+import React from 'react';
+import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
 
-const Layout: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    if (location.pathname === '/app') {
-      navigate('/');
-    }
-  }, [location, navigate]);
-
+export const Layout: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#1a0f0f]">
       <Navbar />
@@ -21,5 +13,3 @@ const Layout: React.FC = () => {
     </div>
   );
 };
-
-export default Layout;

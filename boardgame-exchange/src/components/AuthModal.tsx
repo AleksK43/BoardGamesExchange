@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Shield, Scroll, DoorOpen, UserPlus, Mail, Key, Phone } from 'lucide-react';
+import { X, Shield, Scroll, DoorOpen, UserPlus, Mail, Key, User } from 'lucide-react';
+import { useAuth } from '../providers/AuthProvider';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -8,77 +10,109 @@ interface AuthModalProps {
 }
 
 interface FormErrors {
+  login?: string;
   email?: string;
   password?: string;
-  phoneNumber?: string;
-  terms?: string;
+  general?: string;
 }
 
-const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
+  const navigate = useNavigate();
+  const { login: authLogin, register } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
+    login: '',
     email: '',
     password: '',
-    phoneNumber: '',
-    terms: false
   });
   const [errors, setErrors] = useState<FormErrors>({});
 
-  const validatePassword = (password: string) => {
-    const hasMinLength = password.length >= 8;
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasNumber = /\d/.test(password);
-    return hasMinLength && hasUpperCase && hasNumber;
+  const validateLogin = () => {
+    const newErrors: FormErrors = {};
+    
+    if (!formData.login) {
+      newErrors.login = 'Login is required';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    }
+
+    return newErrors;
   };
 
-  const validateEmail = (email: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
+  const validateRegistration = () => {
+    const newErrors: FormErrors = {};
+    
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Invalid email format';
+    }
 
-  const validatePhoneNumber = (phone: string) => {
-    return /^[0-9]{9}$/.test(phone);
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+
+    return newErrors;
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: value
     }));
-
+    // Clear error when user starts typing
     if (errors[name as keyof FormErrors]) {
       setErrors(prev => ({ ...prev, [name]: undefined }));
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newErrors: FormErrors = {};
-
-    if (!isLogin) {
-      if (!validateEmail(formData.email)) {
-        newErrors.email = 'Your magical scroll address seems incorrect';
-      }
-
-      if (!validatePassword(formData.password)) {
-        newErrors.password = 'Your spell requires 8 characters, 1 capital letter, and 1 number';
-      }
-
-      if (!validatePhoneNumber(formData.phoneNumber)) {
-        newErrors.phoneNumber = 'Your crystal ball number must be 9 digits';
-      }
-
-      if (!formData.terms) {
-        newErrors.terms = 'You must accept the ancient scrolls of agreement';
-      }
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    const validationErrors = isLogin ? validateLogin() : validateRegistration();
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       return;
     }
 
-    console.log('Form submitted:', formData);
+    setLoading(true);
+    setErrors({});
+
+    try {
+      if (isLogin) {
+        await authLogin(formData.login, formData.password);
+        onClose();
+        navigate('/app/games');
+      } else {
+        await register(formData.email, formData.password);
+        onClose();
+        navigate('/app/games');
+      }
+    } catch (error) {
+      setErrors({
+        general: isLogin 
+          ? error instanceof Error ? error.message : 'Login failed'
+          : 'Registration failed. Please try again.'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({ login: '', email: '', password: '' });
+    setErrors({});
+  };
+
+  const switchMode = () => {
+    setIsLogin(!isLogin);
+    resetForm();
   };
 
   return (
@@ -99,10 +133,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               transition={{ type: "spring", duration: 0.5 }}
-              className="w-full max-w-lg bg-gradient-to-b from-[#2c1810] to-[#1a0f0f] 
-                         rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] overflow-hidden 
-                         border border-amber-900/30 mx-4"
+              className="w-full max-w-lg bg-gradient-to-b from-[#2c1810] to-[#1a0f0f] rounded-xl 
+                         shadow-[0_0_30px_rgba(0,0,0,0.5)] overflow-hidden border border-amber-900/30 mx-4"
+              onClick={e => e.stopPropagation()}
             >
+              {/* Modal Header */}
               <div className="relative h-32 bg-[url('/images/parchment-texture.jpg')] bg-cover">
                 <div className="absolute inset-0 bg-gradient-to-b from-amber-900/80 to-[#2c1810]/95">
                   <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
@@ -122,9 +157,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               </div>
 
               <div className="px-8 pt-16 pb-8">
+                {errors.general && (
+                  <div className="mb-4 p-3 bg-red-900/20 border border-red-500/50 rounded-lg text-red-200 text-sm text-center">
+                    {errors.general}
+                  </div>
+                )}
+
                 <div className="flex space-x-4 mb-8">
                   <button
-                    onClick={() => setIsLogin(true)}
+                    onClick={() => switchMode()}
                     className={`flex-1 py-3 rounded-lg transition-all duration-200 flex items-center justify-center gap-2
                               ${isLogin 
                                 ? 'bg-gradient-to-r from-amber-700 to-amber-800 text-amber-100 shadow-lg' 
@@ -135,7 +176,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     <span>Enter the Realm</span>
                   </button>
                   <button
-                    onClick={() => setIsLogin(false)}
+                    onClick={() => switchMode()}
                     className={`flex-1 py-3 rounded-lg transition-all duration-200 flex items-center justify-center gap-2
                               ${!isLogin 
                                 ? 'bg-gradient-to-r from-amber-700 to-amber-800 text-amber-100 shadow-lg' 
@@ -148,26 +189,32 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Login/Email Input */}
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Mail className="h-5 w-5 text-amber-500" />
+                      {isLogin ? <User className="h-5 w-5 text-amber-500" /> : <Mail className="h-5 w-5 text-amber-500" />}
                     </div>
                     <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
+                      type={isLogin ? "text" : "email"}
+                      name={isLogin ? "login" : "email"}
+                      value={isLogin ? formData.login : formData.email}
                       onChange={handleInputChange}
                       className={`w-full pl-10 pr-4 py-3 rounded-lg bg-black/20 border 
-                                ${errors.email ? 'border-red-500' : 'border-amber-900/50'}
+                                ${(errors.login || errors.email) ? 'border-red-500' : 'border-amber-900/50'}
                                 text-amber-100 placeholder-amber-700 focus:outline-none focus:border-amber-500
                                 transition-all duration-200`}
-                      placeholder="Your Magical Scroll (Email)"
+                      placeholder={isLogin ? "Your Username" : "Your Email"}
+                      disabled={loading}
                     />
-                    {errors.email && (
+                    {errors.login && isLogin && (
+                      <p className="mt-1 text-red-500 text-xs">{errors.login}</p>
+                    )}
+                    {errors.email && !isLogin && (
                       <p className="mt-1 text-red-500 text-xs">{errors.email}</p>
                     )}
                   </div>
 
+                  {/* Password Input */}
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <Key className="h-5 w-5 text-amber-500" />
@@ -182,63 +229,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                                 text-amber-100 placeholder-amber-700 focus:outline-none focus:border-amber-500
                                 transition-all duration-200`}
                       placeholder="Your Secret Spell (Password)"
+                      disabled={loading}
                     />
                     {errors.password && (
                       <p className="mt-1 text-red-500 text-xs">{errors.password}</p>
                     )}
                   </div>
 
-                  {!isLogin && (
-                    <>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Phone className="h-5 w-5 text-amber-500" />
-                        </div>
-                        <input
-                          type="tel"
-                          name="phoneNumber"
-                          value={formData.phoneNumber}
-                          onChange={handleInputChange}
-                          className={`w-full pl-10 pr-4 py-3 rounded-lg bg-black/20 border 
-                                    ${errors.phoneNumber ? 'border-red-500' : 'border-amber-900/50'}
-                                    text-amber-100 placeholder-amber-700 focus:outline-none focus:border-amber-500
-                                    transition-all duration-200`}
-                          placeholder="Your Crystal Ball Number"
-                        />
-                        {errors.phoneNumber && (
-                          <p className="mt-1 text-red-500 text-xs">{errors.phoneNumber}</p>
-                        )}
-                      </div>
-
-                      <div className="flex items-start space-x-3">
-                        <input
-                          type="checkbox"
-                          name="terms"
-                          checked={formData.terms}
-                          onChange={handleInputChange}
-                          className="mt-1 h-4 w-4 rounded border-amber-900/50 text-amber-600 
-                                   focus:ring-amber-500 bg-black/20"
-                        />
-                        <label className="text-sm text-amber-200">
-                          I accept the <button type="button" className="text-amber-500 hover:text-amber-400 underline">Ancient Scrolls of Agreement</button>
-                        </label>
-                      </div>
-                      {errors.terms && (
-                        <p className="mt-1 text-red-500 text-xs">{errors.terms}</p>
-                      )}
-                    </>
-                  )}
-
                   <button
                     type="submit"
-                    className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-800 text-amber-100 
-                             rounded-lg hover:from-amber-700 hover:to-amber-900 transform transition-all 
-                             duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 
-                             focus:ring-amber-500 shadow-lg hover:shadow-amber-900/50 
-                             flex items-center justify-center gap-2"
+                    disabled={loading}
+                    className={`w-full py-3 bg-gradient-to-r from-amber-600 to-amber-800 text-amber-100 
+                             rounded-lg transform transition-all duration-200 
+                             focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-lg 
+                             hover:shadow-amber-900/50 flex items-center justify-center gap-2
+                             ${loading 
+                               ? 'opacity-70 cursor-not-allowed' 
+                               : 'hover:from-amber-700 hover:to-amber-900 hover:scale-[1.02]'}`}
                   >
                     <Scroll size={20} />
-                    {isLogin ? "Cast Your Spell" : "Forge Your Legend"}
+                    {loading ? "Casting Spell..." : (isLogin ? "Cast Your Spell" : "Forge Your Legend")}
                   </button>
                 </form>
 
@@ -250,15 +260,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     Lost your mystical password?
                   </button>
                 )}
-
-                <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 
-                              border-amber-900/30 rounded-tl-xl" />
-                <div className="absolute top-0 right-0 w-16 h-16 border-t-2 border-r-2 
-                              border-amber-900/30 rounded-tr-xl" />
-                <div className="absolute bottom-0 left-0 w-16 h-16 border-b-2 border-l-2 
-                              border-amber-900/30 rounded-bl-xl" />
-                <div className="absolute bottom-0 right-0 w-16 h-16 border-b-2 border-r-2 
-                              border-amber-900/30 rounded-br-xl" />
               </div>
             </motion.div>
           </div>

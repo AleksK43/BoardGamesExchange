@@ -1,15 +1,17 @@
 
 export type GameCondition = 'new' | 'used' | 'damaged';
 
-
 export type GameCategory = 'rpg' | 'strategy' | 'card' | 'board';
+
+export type GamdeDifficulty = 'easy' | 'medium' | 'hard';
 
 
 export interface GameFormData {
   title: string;
+  description: string;
   condition: GameCondition;
   category: GameCategory;
-  description: string;
+  dificulty: GamdeDifficulty;
   price: number;
   images: File[];
   tags?: string[];

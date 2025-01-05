@@ -1,180 +1,145 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Dice1, Repeat, User, LogOut, ChevronDown, PlusCircle } from 'lucide-react';
+import { Menu, X, Dice1, User, LogOut, ChevronDown, PlusCircle, Settings } from 'lucide-react';
 import AuthModal from '../AuthModal';
 import ProfileModal from '../ProfileModal';
-
-interface ProfileData {
-  avatarUrl?: string;
-  firstName?: string;
-  lastName?: string;
-}
+import { useAuth } from '../../providers/AuthProvider';
+import { useNotification } from '../../providers/NotificationProvider';
+import { UserLevel } from '../../types/user';
 
 const Navbar: React.FC = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated, user, logout } = useAuth();
+  const { showNotification } = useNotification();
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [profileData] = useState<ProfileData>({});
-  const navigate = useNavigate();
 
-  const isAuthenticated = true;
-
-  const handleAddQuest = () => {
-    navigate('/app/games/add');
-    setIsMenuOpen(false);
+  const handleLogout = () => {
+    logout();
+    setIsUserMenuOpen(false);
+    showNotification('success', 'Successfully logged out');
+    navigate('/');
   };
+
+  const isAdmin = user?.level === UserLevel.ADMIN;
 
   return (
     <>
-      <nav className="bg-gradient-to-b from-[#2c1810] to-[#1a0f0f] border-b border-amber-900/30 relative z-50">
+      <nav className="bg-gradient-to-b from-[#2c1810] to-[#1a0f0f] border-b border-amber-900/30 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <div className="flex-shrink-0">
-              <Link to="/app/games" className="flex items-center gap-2 group">
-                <Dice1 
-                  size={32} 
-                  className="text-amber-500 transform group-hover:rotate-180 transition-transform duration-500" 
-                />
-                <span className="font-medieval text-xl text-amber-100">GameName</span>
-              </Link>
-            </div>
+            <Link to="/" className="flex items-center gap-2 group">
+              <Dice1 
+                size={32} 
+                className="text-amber-500 transform group-hover:rotate-180 transition-transform duration-500" 
+              />
+              <span className="font-medieval text-xl text-amber-100">Board Buddies</span>
+            </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex md:items-center md:space-x-8">
-              <Link 
-                to="/app/games"
-                className="font-medieval text-amber-100 hover:text-amber-400 transition-colors 
-                         flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-amber-900/30"
-              >
-                <Dice1 size={20} />
-                <span>Games</span>
-              </Link>
-              <Link 
-                to="/app/exchange"
-                className="font-medieval text-amber-100 hover:text-amber-400 transition-colors 
-                         flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-amber-900/30"
-              >
-                <Repeat size={20} />
-                <span>Exchange</span>
-              </Link>
-
-              {/* Add Quest Button - tylko dla zalogowanych */}
-              {isAuthenticated && (
-                <button
-                  onClick={handleAddQuest}
-                  className="font-medieval text-amber-100 hover:text-amber-400 transition-colors 
-                           flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-amber-900/30"
-                >
-                  <PlusCircle size={20} />
-                  <span>Add Quest</span>
-                </button>
-              )}
-              
+            <div className="hidden md:flex md:items-center md:gap-8">
               {isAuthenticated ? (
-                <div className="relative flex items-center gap-2">
-                  {/* Avatar */}
-                  <div className="w-10 h-10 rounded-full bg-amber-900/30 border-2 border-amber-500/50
-                               flex items-center justify-center overflow-hidden">
-                    {profileData?.avatarUrl ? (
-                      <img 
-                        src={profileData.avatarUrl} 
-                        alt="Profile" 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <User size={20} className="text-amber-500" />
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="font-medieval flex items-center gap-2 px-4 py-2 
-                             bg-gradient-to-r from-amber-900/50 to-amber-800/50 
-                             text-amber-100 rounded-lg hover:from-amber-800 hover:to-amber-700 
-                             transition-all duration-300"
+                <>
+                  <Link 
+                    to="/app/games"
+                    className="font-medieval text-amber-100 hover:text-amber-400 transition-colors 
+                             flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-amber-900/30"
                   >
-                    <span>Profile</span>
-                    <ChevronDown 
-                      size={16} 
-                      className={`transform transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} 
-                    />
-                  </button>
+                    <Dice1 size={20} />
+                    <span>Games</span>
+                  </Link>
 
-                  {/* Dropdown Menu */}
-                  <AnimatePresence>
-                    {isUserMenuOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="absolute right-0 top-full mt-2 w-48 rounded-lg 
-                                 bg-gradient-to-b from-[#2c1810] to-[#1a0f0f]
-                                 shadow-lg border border-amber-900/30 overflow-hidden"
-                      >
-                        <div className="py-1">
+                  <Link 
+                  to="/app/games/manage"
+                  className="font-medieval text-amber-100 hover:text-amber-400 transition-colors 
+                  flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-amber-900/30"
+                  >
+                    <PlusCircle size={20} />
+                    <span>Manage Games</span>
+                  </Link>
+
+                  {isAdmin && (
+                    <Link 
+                      to="/app/admin"
+                      className="font-medieval text-amber-100 hover:text-amber-400 transition-colors 
+                               flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-amber-900/30"
+                    >
+                      <Settings size={20} />
+                      <span>Admin Panel</span>
+                    </Link>
+                  )}
+
+                  {/* Profile Menu */}
+                  <div className="relative z-50">
+                    <button
+                      onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                      className="flex items-center gap-2 px-4 py-2 bg-amber-900/20 rounded-lg 
+                               hover:bg-amber-900/30 text-amber-100 transition-colors"
+                    >
+                      <User size={20} />
+                      <span className="font-medieval">{user?.email}</span>
+                      <ChevronDown 
+                        size={16} 
+                        className={`transform transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+
+                    <AnimatePresence>
+                      {isUserMenuOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          transition={{ duration: 0.2 }}
+                          className="absolute right-0 mt-2 w-48 bg-[#2c1810] rounded-lg shadow-xl 
+                                   border border-amber-900/30 py-1 z-50"
+                        >
                           <button
                             onClick={() => {
                               setIsProfileModalOpen(true);
                               setIsUserMenuOpen(false);
                             }}
-                            className="w-full text-left px-4 py-2 text-amber-100 
-                                     hover:bg-amber-900/30 transition-colors
-                                     flex items-center gap-2"
+                            className="w-full text-left px-4 py-2 text-amber-100 hover:bg-amber-900/30 
+                                     transition-colors font-medieval flex items-center gap-2"
                           >
                             <User size={16} />
-                            <span>My Profile</span>
+                            Profile
                           </button>
                           <button
-                            onClick={() => {
-                              // Handle logout
-                              setIsUserMenuOpen(false);
-                            }}
-                            className="w-full text-left px-4 py-2 text-amber-100 
-                                     hover:bg-amber-900/30 transition-colors
-                                     flex items-center gap-2"
+                            onClick={handleLogout}
+                            className="w-full text-left px-4 py-2 text-amber-100 hover:bg-amber-900/30 
+                                     transition-colors font-medieval flex items-center gap-2"
                           >
                             <LogOut size={16} />
-                            <span>Logout</span>
+                            Logout
                           </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </>
               ) : (
                 <button
                   onClick={() => setIsAuthModalOpen(true)}
-                  className="font-medieval px-4 py-2 bg-amber-600 text-amber-100 
-                           rounded-lg hover:bg-amber-700 transition-colors"
+                  className="font-medieval px-6 py-2 bg-gradient-to-r from-amber-700 to-amber-800
+                           hover:from-amber-800 hover:to-amber-900 text-amber-100 rounded-lg 
+                           transition-colors"
                 >
                   Login
                 </button>
               )}
             </div>
 
-            {/* Mobile menu button and Avatar */}
-            <div className="md:hidden flex items-center gap-3">
-              {/* Avatar */}
-              <div className="w-10 h-10 rounded-full bg-amber-900/30 border-2 border-amber-500/50
-                          flex items-center justify-center overflow-hidden">
-                {profileData?.avatarUrl ? (
-                  <img 
-                    src={profileData.avatarUrl} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <User size={20} className="text-amber-500" />
-                )}
-              </div>
-
-              {/* Menu Button */}
+            {/* Mobile menu button */}
+            <div className="md:hidden relative z-50">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="text-amber-100 hover:text-amber-400 transition-colors p-2"
+                className="text-amber-100 p-2 hover:bg-amber-900/30 rounded-lg transition-colors"
               >
                 {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
@@ -186,54 +151,55 @@ const Navbar: React.FC = () => {
         <AnimatePresence>
           {isMenuOpen && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="md:hidden"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="md:hidden border-t border-amber-900/30 relative z-40 bg-[#1a0f0f]"
             >
-              <div className="px-2 pt-2 pb-3 space-y-1">
-                <Link
-                  to="/app/games"
-                  className="block px-3 py-2 rounded-md text-amber-100 hover:text-amber-400 
-                           hover:bg-amber-900/30 transition-colors"
-                >
-                  Games
-                </Link>
-                <Link
-                  to="/app/exchange"
-                  className="block px-3 py-2 rounded-md text-amber-100 hover:text-amber-400 
-                           hover:bg-amber-900/30 transition-colors"
-                >
-                  Exchange
-                </Link>
-                {isAuthenticated && (
-                  <button
-                    onClick={handleAddQuest}
-                    className="w-full text-left px-3 py-2 rounded-md text-amber-100 
-                             hover:text-amber-400 hover:bg-amber-900/30 transition-colors"
-                  >
-                    Add Quest
-                  </button>
-                )}
+              <div className="px-4 py-3 space-y-1">
                 {isAuthenticated ? (
                   <>
+                    <Link
+                      to="/app/games"
+                      className="block px-3 py-2 rounded-lg text-amber-100 hover:bg-amber-900/30
+                               transition-colors font-medieval"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Games
+                    </Link>
+                    <Link
+                      to="/app/games/add"
+                      className="block px-3 py-2 rounded-lg text-amber-100 hover:bg-amber-900/30
+                               transition-colors font-medieval"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Add Game
+                    </Link>
+                    {isAdmin && (
+                      <Link
+                        to="/app/admin"
+                        className="block px-3 py-2 rounded-lg text-amber-100 hover:bg-amber-900/30
+                                 transition-colors font-medieval"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Admin Panel
+                      </Link>
+                    )}
                     <button
                       onClick={() => {
                         setIsProfileModalOpen(true);
                         setIsMenuOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 rounded-md text-amber-100 
-                               hover:text-amber-400 hover:bg-amber-900/30 transition-colors"
+                      className="w-full text-left px-3 py-2 rounded-lg text-amber-100 
+                               hover:bg-amber-900/30 transition-colors font-medieval"
                     >
-                      My Profile
+                      Profile
                     </button>
                     <button
-                      onClick={() => {
-                        // Handle logout
-                        setIsMenuOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-md text-amber-100 
-                               hover:text-amber-400 hover:bg-amber-900/30 transition-colors"
+                      onClick={handleLogout}
+                      className="w-full text-left px-3 py-2 rounded-lg text-amber-100 
+                               hover:bg-amber-900/30 transition-colors font-medieval"
                     >
                       Logout
                     </button>
@@ -244,8 +210,8 @@ const Navbar: React.FC = () => {
                       setIsAuthModalOpen(true);
                       setIsMenuOpen(false);
                     }}
-                    className="w-full text-left px-3 py-2 rounded-md text-amber-100 
-                             hover:text-amber-400 hover:bg-amber-900/30 transition-colors"
+                    className="w-full text-left px-3 py-2 rounded-lg text-amber-100 
+                             hover:bg-amber-900/30 transition-colors font-medieval"
                   >
                     Login
                   </button>

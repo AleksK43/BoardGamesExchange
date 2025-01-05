@@ -1,24 +1,24 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Layout from './components/layout/Layout';
-import HomePage from './pages/HomePage';
-import GamesPage from './pages/GamesPage';
-import AddGame from './pages/Games/components/AddGame';
-
+import { BrowserRouter as Router } from 'react-router-dom';
+import { AuthProvider } from './providers/AuthProvider';
+import { LoadingProvider } from './providers/LoadingProvider';
+import { NotificationProvider } from './providers/NotificationProvider';
+import AppRoutes from './routes/AppRoutes';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        {/* Zagnieżdżone ścieżki z Layout */}
-        <Route path="/app" element={<Layout />}>
-          <Route path="games" element={<GamesPage />} />
-          <Route path="/app/games/*" element={<AddGame />} />
-
-          {/* Możemy dodać więcej ścieżek w przyszłości */}
-        </Route>
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <LoadingProvider>
+        <NotificationProvider>
+          <Router>
+            <div className="flex flex-col min-h-screen bg-[#1a0f0f]">
+              <main className="flex-1">
+                <AppRoutes />
+              </main>
+            </div>
+          </Router>
+        </NotificationProvider>
+      </LoadingProvider>
+    </AuthProvider>
   );
 }
 

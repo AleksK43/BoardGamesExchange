@@ -1,30 +1,44 @@
-// src/routes/AppRoutes.tsx
 import { Routes, Route, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import HomePage from '../pages/HomePage';
 import GamesPage from '../pages/GamesPage';
-import PageTransition from '../components/PageTransition';
-import { useTransition } from '../hooks/useTransition';
 import AddGame from '../pages/Games/components/AddGame';
-import MyGames from '../pages/Games/components/MyGames';
+import AdminPanel from '../pages/AdminPanel';
+import { useLoading } from '../providers/LoadingProvider';
+import { Layout } from '../components/layout/Layout';
 
 const AppRoutes = () => {
   const location = useLocation();
-  const { isNavigating } = useTransition();
+  const { startLoading, stopLoading } = useLoading();
+
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+
+    const handleNavigation = async () => {
+      startLoading();
+      timeout = setTimeout(() => {
+        stopLoading();
+      }, 800);
+    };
+
+    handleNavigation();
+
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [location.pathname, startLoading, stopLoading]);
 
   return (
     <AnimatePresence mode="wait">
-      <PageTransition isNavigating={isNavigating}>
-        <Routes location={location} key={location.pathname}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/games" element={<GamesPage />} />
-          {/* Zagnieżdżone ścieżki dla sekcji games */}
-          <Route path="/app/games">
-            <Route path="add" element={<AddGame />} />
-            <Route path="my-games" element={<MyGames />} />
-          </Route>
-        </Routes>
-      </PageTransition>
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/app" element={<Layout />}>
+          <Route path="games" element={<GamesPage />} />
+          <Route path="games/manage" element={<AddGame />} />
+          <Route path="admin" element={<AdminPanel />} />
+        </Route>
+      </Routes>
     </AnimatePresence>
   );
 };
