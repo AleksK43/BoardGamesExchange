@@ -7,6 +7,7 @@ import { useLoading } from '../../../providers/LoadingProvider';
 import { gameService } from '../../../services/api';
 import GameCard from '../../../components/GameCard';
 import GameDetailsModal from '../../../components/GameDetailsModal';
+import EditGameModal from '../../../components/EditGameModal';
 import { Game, GameCardData } from '../../../types/game';
 
 const MyGames: React.FC = () => {
@@ -18,15 +19,59 @@ const MyGames: React.FC = () => {
   const [isGameDetailsOpen, setIsGameDetailsOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  const mapToGameCardData = async (game: Game): Promise<GameCardData> => {
+    try {
+      const gameImages = await gameService.getGameImages(game.id);
+      const imageUrls = gameImages.map(img => img.data);
+
+      return {
+        id: game.id.toString(),
+        title: game.title,
+        description: game.description,
+        images: imageUrls, 
+        category: game.category || 'board',
+        difficulty: game.difficulty || 'medium',
+        condition: game.condition,
+        numberOfPlayers: game.numberOfPlayers,
+        availableFrom: game.availableFrom,
+        availableTo: game.availableTo,
+        owner: {
+          id: game.owner.id.toString(),
+          name: `${game.owner.firstname} ${game.owner.lastname}`.trim() || 'Anonymous',
+          city: game.owner.city || 'Unknown location'
+        }
+      };
+    } catch (error) {
+      console.error('Error fetching game images:', error);
+      return {
+        id: game.id.toString(),
+        title: game.title,
+        description: game.description,
+        images: [], 
+        category: game.category || 'board',
+        difficulty: game.difficulty || 'medium',
+        condition: game.condition,
+        numberOfPlayers: game.numberOfPlayers,
+        availableFrom: game.availableFrom,
+        availableTo: game.availableTo,
+        owner: {
+          id: game.owner.id.toString(),
+          name: `${game.owner.firstname} ${game.owner.lastname}`.trim() || 'Anonymous',
+          city: game.owner.city || 'Unknown location'
+        }
+      };
+    }
+  };
+
   const fetchUserGames = useCallback(async () => {
     if (!user) return;
     
     try {
       startLoading();
       const response = await gameService.getAllGames();
-      // Filter games for current user using number comparison
       const userGames = response.filter(game => game.owner.id === user.id);
-      const mappedGames = userGames.map(mapToGameCardData);
+      const mappedGamesPromises = userGames.map(mapToGameCardData);
+      const mappedGames = await Promise.all(mappedGamesPromises);
       setGames(mappedGames);
     } catch (error) {
       console.error('Failed to fetch games:', error);
@@ -40,38 +85,16 @@ const MyGames: React.FC = () => {
     fetchUserGames();
   }, [fetchUserGames]);
 
-  const mapToGameCardData = (game: Game): GameCardData => {
-    return {
-      id: game.id.toString(),
-      title: game.title,
-      description: game.description,
-      imageUrl: '',
-      category: game.category || 'board',
-      difficulty: game.difficulty || 'medium',
-      condition: game.condition,
-      numberOfPlayers: game.numberOfPlayers,
-      availableFrom: game.availableFrom,
-      availableTo: game.availableTo,
-      owner: {
-        id: game.owner.id.toString(),
-        name: `${game.owner.firstname} ${game.owner.lastname}`.trim() || 'Anonymous',
-        city: game.owner.city || 'Unknown location'
-      }
-    };
-  };
-
   const handleGameClick = (game: GameCardData) => {
     setSelectedGame(game);
     setIsGameDetailsOpen(true);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleEdit = (game: GameCardData) => {
     setSelectedGame(game);
     setIsEditModalOpen(true);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleDelete = async (game: GameCardData) => {
     if (window.confirm('Are you sure you want to remove this game from your collection?')) {
       try {
@@ -171,6 +194,13 @@ const MyGames: React.FC = () => {
         game={selectedGame}
         isOpen={isGameDetailsOpen}
         onClose={() => setIsGameDetailsOpen(false)}
+      />
+
+      <EditGameModal
+        game={selectedGame}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onGameUpdated={fetchUserGames}
       />
     </div>
   );

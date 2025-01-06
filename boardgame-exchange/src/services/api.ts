@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { Game, CreateGameData, BoardGameImageDTO } from '../types/game';
 import { UserDTO } from '../types/user';
+import { BorrowGameRequestDTO } from '../types/requests';
+import type { GameReview, ReviewRating } from '../types/review';
 
 const api = axios.create({
   baseURL: '/api/v1',
@@ -38,6 +40,64 @@ api.interceptors.response.use(
 );
 
 export const gameService = {
+
+  requestBorrow: async (gameId: number): Promise<void> => {
+    try {
+      await api.put(`/board-game/borrow-request/${gameId}/request`);
+    } catch (error) {
+      console.error('Failed to request game borrow:', error);
+      throw new Error('Failed to request game borrow');
+    }
+  },
+
+  getGameReviews: async (gameId: number): Promise<GameReview[]> => {
+    try {
+      const response = await api.get<GameReview[]>(`/review/game/${gameId}/all`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch game reviews:', error);
+      throw new Error('Failed to fetch game reviews');
+    }
+  },
+
+  getGameRating: async (gameId: number): Promise<ReviewRating> => {
+    try {
+      const response = await api.get<ReviewRating>(`/review/game/${gameId}/avg`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch game rating:', error);
+      throw new Error('Failed to fetch game rating');
+    }
+  },
+
+  getBorrowRequests: async (): Promise<BorrowGameRequestDTO[]> => {
+    const response = await api.get('/board-game/borrow-request/games');
+    return response.data;
+  },
+
+  getMyBorrowRequests: async (): Promise<BorrowGameRequestDTO[]> => {
+    const response = await api.get('/board-game/borrow-request/my');
+    return response.data;
+  },
+
+  requestBorrowGame: async (gameId: number): Promise<void> => {
+    await api.put(`/board-game/borrow-request/${gameId}/request`);
+  },
+
+  acceptBorrowRequest: async (borrowRequestId: number): Promise<void> => {
+    await api.put(`/board-game/borrow-request/${borrowRequestId}/agree`);
+  },
+
+  returnGame: async (borrowRequestId: number, comment: string, rating: number): Promise<void> => {
+    await api.put(`/board-game/borrow-request/${borrowRequestId}/return`, {
+      comment,
+      rating
+    });
+  },
+
+  deleteBorrowRequest: async (borrowRequestId: number): Promise<void> => {
+    await api.delete(`/board-game/borrow-request/${borrowRequestId}/delete`);
+  },
   getAllGames: async (): Promise<Game[]> => {
     try {
       const response = await api.get('/board-game/all');

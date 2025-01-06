@@ -1,24 +1,88 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Users, MapPin, Calendar, Star, User, MessageCircle } from 'lucide-react';
-import { GameCardData } from '../types/game';
+import { X, Users, MapPin, Calendar, Star, User, Scroll } from 'lucide-react';
 import { format } from 'date-fns';
-import ImageSlider from './ImageSlider';
+import type { GameCardData } from '../types/game';
+import type { GameReview, ReviewRating } from '../types/review';
+import { gameService } from '../services/api';
+import { useAuth } from '../providers/AuthProvider';
+import { useNotification } from '../providers/NotificationProvider';
+import GameReviews from './GameReviews';
 
 interface GameDetailsModalProps {
   game: GameCardData | null;
   isOpen: boolean;
   onClose: () => void;
-  onContactOwner?: () => void;
 }
 
 const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
   game,
   isOpen,
-  onClose,
-  onContactOwner
+  onClose
 }) => {
+  const { user } = useAuth();
+  const { showNotification } = useNotification();
+  const [reviews, setReviews] = useState<GameReview[]>([]);
+  const [rating, setRating] = useState<ReviewRating>({
+    average: 0,
+    starsCount_1: 0,
+    starsCount_2: 0,
+    starsCount_3: 0,
+    starsCount_4: 0,
+    starsCount_5: 0
+  });
+  const [isRequesting, setIsRequesting] = useState(false);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!game || !isOpen) return;
+  
+      try {
+        const reviewsResult = await gameService.getGameReviews(Number(game.id));
+        setReviews(reviewsResult);
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+        setReviews([]);
+      }
+  
+      try {
+        const ratingResult = await gameService.getGameRating(Number(game.id));
+        setRating(ratingResult);
+      } catch (error) {
+        console.error('Error fetching rating:', error);
+        setRating({
+          average: 0,
+          starsCount_1: 0,
+          starsCount_2: 0,
+          starsCount_3: 0,
+          starsCount_4: 0,
+          starsCount_5: 0
+        });
+      }
+    };
+
+    fetchReviews();
+  }, [game, isOpen, showNotification]);
+
+  const handleBorrowRequest = async () => {
+    if (!game || !user) return;
+
+    try {
+      setIsRequesting(true);
+      await gameService.requestBorrow(Number(game.id));
+      showNotification('success', 'Borrow request sent successfully!');
+      onClose();
+    } catch (error) {
+      console.error('Error requesting borrow:', error);
+      showNotification('error', 'Failed to send borrow request');
+    } finally {
+      setIsRequesting(false);
+    }
+  };
+
   if (!game) return null;
+
+  const isOwnGame = user?.id === Number(game.owner.id);
 
   return (
     <AnimatePresence>
@@ -45,10 +109,18 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
             >
               {/* Header Image with ImageSlider */}
               <div className="relative h-96 overflow-hidden rounded-t-xl">
-                <ImageSlider
-                  images={game.images}
-                  className="h-full w-full"
-                />
+                {game.images && game.images.length > 0 ? (
+                  <img
+                    src={game.images[0]}
+                    alt={game.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-b from-amber-900/20 to-amber-950/20 
+                               flex items-center justify-center">
+                    <Scroll className="w-16 h-16 text-amber-500/50" />
+                  </div>
+                )}
                 
                 <button
                   onClick={onClose}
@@ -59,10 +131,13 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                 >
                   <X size={24} />
                 </button>
+
+                {/* Overlay gradient */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#1a0f0f] via-transparent to-transparent" />
               </div>
 
               {/* Content */}
-              <div className="p-6">
+              <div className="p-6 -mt-12 relative">
                 <div className="flex justify-between items-start gap-4 mb-6">
                   <div>
                     <h2 className="text-3xl font-medieval text-amber-100 mb-2">
@@ -126,19 +201,39 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex justify-end gap-4">
-                  <button
-                    onClick={onContactOwner}
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r 
-                             from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800
-                             text-amber-100 rounded-lg transition-colors font-medieval
-                             border border-amber-500/30"
-                  >
-                    <MessageCircle size={18} />
-                    <span>Contact Owner</span>
-                  </button>
+                {/* Reviews Section */}
+                <div className="mb-6">
+                  <h3 className="text-xl font-medieval text-amber-200 mb-4">Reviews & Ratings</h3>
+                  <GameReviews reviews={reviews} rating={rating} />
                 </div>
+
+                {/* Actions */}
+                {!isOwnGame && (
+                  <div className="flex justify-end gap-4">
+                    <button
+                      onClick={handleBorrowRequest}
+                      disabled={isRequesting}
+                      className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r 
+                               from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800
+                               text-amber-100 rounded-lg transition-colors font-medieval
+                               disabled:opacity-50 disabled:cursor-not-allowed
+                               border border-amber-500/30"
+                    >
+                      {isRequesting ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-amber-100 border-t-transparent 
+                                      rounded-full animate-spin" />
+                          <span>Sending Request...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Scroll size={18} />
+                          <span>Request Borrow</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
