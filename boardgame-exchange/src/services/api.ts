@@ -1,27 +1,68 @@
-import axios, { AxiosError } from 'axios';
-import { UserDTO, UserUpdateDTO } from '../types/user';
-import { Game } from '../types/game';
+import axios from 'axios';
+import { Game, CreateGameData, BoardGameImageDTO } from '../types/game';
+import { UserDTO } from '../types/user';
 
 const api = axios.create({
-  baseURL: '/api/v1'
+  baseURL: '/api/v1',
+  headers: {
+    'Content-Type': 'application/json'
+  }
 });
 
 api.interceptors.request.use(
   config => {
     const token = localStorage.getItem('jwt_token');
+    console.log('Request details:', {
+      url: config.url,
+      method: config.method,
+      token: token ? 'present' : 'absent',
+      headers: config.headers
+    });
+
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
-    config.headers['Content-Type'] = 'application/json';
     return config;
   },
-  error => Promise.reject(error)
+  error => {
+    return Promise.reject(error);
+  }
+);
+
+api.interceptors.response.use(
+  response => response,
+  error => {
+    console.error('Response error:', error.response?.data, error.response?.status);
+    return Promise.reject(error);
+  }
 );
 
 export const gameService = {
-  addGame: async (gameData: Game): Promise<Game> => {
+  getAllGames: async (): Promise<Game[]> => {
     try {
-      const response = await api.put<Game>('/board-game/add', {
+      const response = await api.get('/board-game/all');
+      console.log('API response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('API error:', error);
+      throw error;
+    }
+  },
+  editGame: async (id: number, data: Partial<Game>) => {
+    try {
+      console.log('Sending edit request:', { id, data });
+      const response = await api.put(`/board-game/${id}`, data);
+      console.log('Edit response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Edit game error:', error);
+      throw error;
+    }
+  },
+
+  addGame: async (gameData: CreateGameData): Promise<Game> => {
+    try {
+      const formattedData = {
         title: gameData.title,
         description: gameData.description,
         category: gameData.category,
@@ -30,55 +71,66 @@ export const gameService = {
         availableFrom: gameData.availableFrom,
         availableTo: gameData.availableTo,
         difficulty: gameData.difficulty,
-        imageBase64: gameData.imageBase64,
-        user: gameData.owner 
-      });
+        deleted: false
+      };
+      
+      console.log('Sending game data:', formattedData);
+      const response = await api.post<Game>('/board-game/add', formattedData);
       return response.data;
-    } catch (error: unknown) {
-      const axiosError = error as AxiosError;
-      console.error('Full error details:', axiosError);
-      console.error('Error response:', axiosError.response?.data);
-      console.error('Error status:', axiosError.response?.status);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error('Failed to add game:', error);
+        console.error('Response data:', error.response?.data);
+      }
       throw new Error('Failed to add game');
     }
   },
 
-  getAllGames: async (): Promise<Game[]> => {
+  addGameImage: async (boardGameId: number, imageData: Omit<BoardGameImageDTO, 'id'>): Promise<BoardGameImageDTO> => {
     try {
-      const response = await api.get<Game[]>('/board-game/all');
+      const response = await api.post<BoardGameImageDTO>(
+        `/board-game-image/${boardGameId}/add`,
+        {
+          filename: imageData.filename,
+          data: imageData.data,
+          boardGameId: boardGameId,
+          createDate: new Date().toISOString()
+        }
+      );
       return response.data;
     } catch (error) {
-      console.error('Error fetching games:', error);
-      throw new Error('Failed to fetch games');
+      console.error('Failed to add game image:', error);
+      throw new Error('Failed to add game image');
     }
   },
 
-  editGame: async (gameId: string, gameData: Omit<Game, 'id' | 'createDate' | 'owner'>) => {
+  removeGameImage: async (imageId: number): Promise<void> => {
     try {
-      const response = await api.post<Game>(`/board-game/edit/${gameId}`, {
-        title: gameData.title,
-        description: gameData.description,
-        category: gameData.category,
-        condition: gameData.condition,
-        numberOfPlayers: gameData.numberOfPlayers,
-        availableFrom: gameData.availableFrom,
-        availableTo: gameData.availableTo,
-        difficulty: gameData.difficulty,
-        imageBase64: gameData.imageBase64
-      });
-      return response.data;
+      await api.delete(`/board-game-image/${imageId}/delete`);
     } catch (error) {
-      console.error('Error editing game:', error);
-      throw new Error('Failed to edit game');
+      console.error('Failed to remove game image:', error);
+      throw new Error('Failed to remove game image');
     }
   },
 
-  deleteGame: async (gameId: string) => {
+  deleteGame: async (postId: number): Promise<void> => {
     try {
-      await api.delete(`/board-game/delete/${gameId}`);
+      await api.delete(`/board-game/delete/${postId}`);
     } catch (error) {
-      console.error('Error deleting game:', error);
-      throw new Error('Failed to delete game');
+      console.error('Failed to delete game:', error);
+      throw error;
+    }
+  },
+
+  getGameImages: async (boardGameId: number): Promise<BoardGameImageDTO[]> => {
+    try {
+      const response = await api.get<BoardGameImageDTO[]>(
+        `/board-game-image/${boardGameId}/fetch`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch game images:', error);
+      throw new Error('Failed to fetch game images');
     }
   }
 };
@@ -87,7 +139,7 @@ export const authService = {
   login: async (credentials: { login: string; password: string }): Promise<string> => {
     try {
       const response = await api.post('/user/auth', {
-        email: credentials.login,
+        email: credentials.login, // mapujemy login na email
         password: credentials.password
       });
       
@@ -97,32 +149,24 @@ export const authService = {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         return token;
       }
-      throw new Error('Nie otrzymano tokenu autoryzacji');
+      throw new Error('No authentication token received');
     } catch (error) {
-      if (error instanceof Error) {
-        throw error;
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 409) {
+          throw new Error('Nieprawidłowe dane logowania!');
+        }
       }
-      throw new Error('Błąd logowania');
+      throw new Error('Failed to login');
     }
   },
 
-  register: async (data: { email: string; password: string }) => {
+  register: async (data: { email: string; password: string }): Promise<UserDTO> => {
     try {
-      const response = await api.post('/user/register', data);
-      return response.data;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      throw new Error('Błąd rejestracji');
-    }
-  },
-
-  updateUserData: async (userData: UserUpdateDTO): Promise<UserDTO> => {
-    try {
-      const response = await api.put<UserDTO>('/user/data', userData);
+      const response = await api.post<UserDTO>('/user/register', data);
       return response.data;
     } catch (error) {
-      console.error('Error updating user data:', error);
-      throw new Error('Failed to update user data');
+      console.error('Registration error:', error);
+      throw new Error('Failed to register');
     }
   },
 
@@ -136,11 +180,29 @@ export const authService = {
     }
   },
 
+  updateUserData: async (userData: UserDTO): Promise<UserDTO> => {
+    try {
+      const response = await api.put<UserDTO>('/user/data', userData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating user data:', error);
+      throw new Error('Failed to update user data');
+    }
+  },
+
+  changePassword: async (oldPassword: string, newPassword: string): Promise<void> => {
+    try {
+      await api.put('/user/change-password', { oldPassword, newPassword });
+    } catch (error) {
+      console.error('Error changing password:', error);
+      throw new Error('Failed to change password');
+    }
+  },
+
   logout: () => {
     localStorage.removeItem('jwt_token');
     delete api.defaults.headers.common['Authorization'];
   }
-
 };
 
 export default api;

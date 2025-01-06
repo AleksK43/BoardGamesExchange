@@ -1,145 +1,259 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import GameCard from '../components/GameCard';
-import { Game } from '../types/game';
-import { Search, Filter } from 'lucide-react';
-
-const MOCK_GAMES: Game[] = [
-  {
-    id: '1',
-    title: 'Dungeons & Dragons: Starter Set',
-    description: 'Everything you need to start playing the worlds greatest roleplaying game.',
-    imageUrl: 'https://placeholder.com/dnd-starter',
-    category: 'RPG',
-    players: { min: 2, max: 6 },
-    playTime: { min: 60, max: 180 },
-    difficulty: 'Medium',
-    rating: 4.8,
-    owner: {
-      id: 'user1',
-      name: 'John Doe',
-      location: 'Warsaw'
-    }
-  },
-  // Dodaj więcej gier...
-];
+import { Game, GameCardData } from '../types/game';
+import { Filter, Lock, LogIn } from 'lucide-react';
+import { useNotification } from '../providers/NotificationProvider';
+import { useLoading } from '../providers/LoadingProvider';
+import { useAuth } from '../providers/AuthProvider';
+import { gameService } from '../services/api';
+import { GameFilters as IGameFilters } from '../types/filters';
+import GameFiltersComponent from '../components/GameFilters';
+import SearchComponent from '../components/SearchComponent';
+import GameDetailsModal from '../components/GameDetailsModal';
+import AuthModal from '../components/AuthModal';
 
 const GamesPage: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchType, setSearchType] = useState<'title' | 'city'>('title');
   const [showFilters, setShowFilters] = useState(false);
+  const [games, setGames] = useState<Game[]>([]);
+  const [selectedGame, setSelectedGame] = useState<GameCardData | null>(null);
+  const [isGameDetailsOpen, setIsGameDetailsOpen] = useState(false);
+  const [filters, setFilters] = useState<IGameFilters>({
+    category: null,
+    condition: null,
+    difficulty: null,
+    minPlayers: null,
+    maxPlayers: null,
+    city: null
+  });
 
-  const handleGameClick = (game: Game) => {
-    console.log('Game clicked:', game);
+  const { showNotification } = useNotification();
+  const { startLoading, stopLoading } = useLoading();
+
+  const fetchGames = useCallback(async () => {
+    if (!isAuthenticated) return;
+    
+    try {
+      startLoading();
+      const gamesData = await gameService.getAllGames();
+      
+      if (Array.isArray(gamesData)) {
+        setGames(gamesData);
+      } else {
+        setGames([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch games:', error);
+      showNotification('error', 'Failed to load games');
+      setGames([]);
+    } finally {
+      stopLoading();
+    }
+  }, [startLoading, stopLoading, showNotification, isAuthenticated]);
+
+  useEffect(() => {
+    fetchGames();
+  }, [fetchGames]);
+
+  const mapToGameCardData = useCallback((game: Game): GameCardData => {
+    return {
+      id: game.id.toString(),
+      title: game.title,
+      description: game.description,
+      imageUrl: '',
+      category: game.category || 'board',
+      difficulty: game.difficulty || 'medium',
+      condition: game.condition,
+      numberOfPlayers: game.numberOfPlayers,
+      availableFrom: game.availableFrom,
+      availableTo: game.availableTo,
+      owner: {
+        id: game.owner.id.toString(),
+        name: `${game.owner.firstname} ${game.owner.lastname}`.trim() || 'Anonymous',
+        city: game.owner.city || 'Unknown location'
+      }
+    };
+  }, []);
+
+  const handleSearch = (term: string, type: 'title' | 'city') => {
+    setSearchTerm(term);
+    setSearchType(type);
   };
+
+  const handleGameClick = (game: GameCardData) => {
+    setSelectedGame(game);
+    setIsGameDetailsOpen(true);
+  };
+
+  const handleContactOwner = () => {
+    showNotification('info', 'Contact functionality coming soon!');
+  };
+
+  const filteredGames = useMemo(() => {
+    return games
+      .filter(game => {
+        // Search filtering
+        if (searchTerm) {
+          if (searchType === 'city') {
+            if (!game.owner.city?.toLowerCase().includes(searchTerm.toLowerCase())) {
+              return false;
+            }
+          } else {
+            if (!game.title.toLowerCase().includes(searchTerm.toLowerCase())) {
+              return false;
+            }
+          }
+        }
+
+        // Category filter
+        if (filters.category && game.category !== filters.category) {
+          return false;
+        }
+
+        // Condition filter
+        if (filters.condition && game.condition !== filters.condition) {
+          return false;
+        }
+
+        // Difficulty filter
+        if (filters.difficulty && game.difficulty !== filters.difficulty) {
+          return false;
+        }
+
+        // Number of players filter
+        if (filters.minPlayers && game.numberOfPlayers < filters.minPlayers) {
+          return false;
+        }
+        if (filters.maxPlayers && game.numberOfPlayers > filters.maxPlayers) {
+          return false;
+        }
+
+        // City filter from advanced filters
+        if (filters.city && game.owner.city) {
+          const cityMatch = game.owner.city.toLowerCase().includes(filters.city.toLowerCase());
+          if (!cityMatch) {
+            return false;
+          }
+        }
+
+        return true;
+      })
+      .map(mapToGameCardData)
+      .filter(Boolean) as GameCardData[];
+  }, [games, searchTerm, searchType, filters, mapToGameCardData]);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#1a0f0f] flex items-center justify-center px-4">
+        <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+        <div className="text-center max-w-2xl mx-auto">
+          <div className="bg-amber-900/20 rounded-lg p-8 border border-amber-900/30">
+            <div className="mb-6 flex justify-center">
+              <Lock className="w-16 h-16 text-amber-500" />
+            </div>
+            <h2 className="text-3xl font-medieval text-amber-100 mb-4">
+              Welcome, Adventurer!
+            </h2>
+            <p className="text-amber-200/80 mb-4 font-crimson text-lg">
+              The grand hall of Board Buddies awaits behind these enchanted gates.
+            </p>
+            <p className="text-amber-200/80 mb-6 font-crimson text-lg">
+              Join our fellowship of game masters and collectors to explore a treasure trove 
+              of board games and forge alliances with fellow adventurers.
+            </p>
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r 
+                       from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 
+                       text-amber-100 rounded-lg transition-colors transform hover:scale-105
+                       font-medieval text-lg shadow-lg hover:shadow-amber-600/50"
+            >
+              <LogIn className="w-6 h-6" />
+              <span>Begin Your Quest</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#1a0f0f] text-amber-100">
-  
-      <div className="relative h-64 bg-cover bg-center" 
-           style={{ backgroundImage: 'url("/images/skull-candle-arrangement-still-life.jpg")' }}>
-        <div className="absolute inset-0 bg-black/50" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <h1 className="font-medieval text-4xl md:text-5xl lg:text-6xl font-bold text-center 
-                        text-amber-100 tracking-wider text-shadow-lg">
-            Available Games
-          </h1>
-        </div>
-      </div>
-
-      {/* Search and filters */}
       <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-amber-500" />
-            <input
-              type="text"
-              placeholder="Search for mystical games..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-[#2c1810] border border-amber-900/50 rounded-lg
-                         text-amber-100 placeholder-amber-700
-                         focus:ring-2 focus:ring-amber-500 focus:border-transparent
-                         font-cinzel transition-all duration-200"
-            />
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-medieval text-amber-100 mb-6">
+            The Grand Collection of Games
+          </h1>
+          
+          {/* Search Bar */}
+          <div className="space-y-4">
+            <SearchComponent onSearch={handleSearch} />
+            
+            {/* Filters Toggle */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`px-4 py-2.5 rounded-lg transition-all duration-200 flex items-center 
+                         justify-center gap-2 font-medieval w-full sm:w-auto
+                         ${showFilters 
+                           ? 'bg-amber-800/50 text-amber-100 border-2 border-amber-500/50' 
+                           : 'bg-amber-900/20 text-amber-400 hover:bg-amber-900/30 hover:text-amber-300'
+                         }`}
+              >
+                <Filter className="h-5 w-5" />
+                <span>Enchanted Filters</span>
+              </button>
+            </div>
+
+            {/* Filters Panel */}
+            <AnimatePresence>
+              {showFilters && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="bg-amber-900/20 rounded-lg p-4 border border-amber-900/30">
+                    <GameFiltersComponent 
+                      filters={filters}
+                      onFiltersChange={setFilters}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="font-medieval flex items-center gap-2 px-6 py-3 
-                       bg-gradient-to-r from-amber-900 to-amber-800
-                       hover:from-amber-800 hover:to-amber-700
-                       text-amber-100 rounded-lg transition-all duration-300
-                       hover:shadow-lg hover:shadow-amber-900/50"
-          >
-            <Filter className="w-5 h-5" />
-            Magic Filters
-          </button>
         </div>
 
-        {/* Filters panel */}
-        {showFilters && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="mb-8 p-6 bg-[#2c1810] rounded-lg border border-amber-900/30
-                      shadow-lg backdrop-blur-sm"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Filtry */}
-              <div className="space-y-3">
-                <label className="font-medieval block text-sm text-amber-200">
-                  Category of Magic
-                </label>
-                <select className="w-full p-3 bg-[#1a0f0f] rounded-lg border border-amber-900/50
-                                 text-amber-100 font-cinzel focus:ring-2 focus:ring-amber-500">
-                  <option value="">All Categories</option>
-                  <option value="rpg">RPG Legends</option>
-                  <option value="strategy">Strategic Battles</option>
-                  <option value="card">Mystical Cards</option>
-                </select>
-              </div>
-              
-              <div className="space-y-3">
-                <label className="font-medieval block text-sm text-amber-200">
-                  Quest Difficulty
-                </label>
-                <select className="w-full p-3 bg-[#1a0f0f] rounded-lg border border-amber-900/50
-                                 text-amber-100 font-cinzel focus:ring-2 focus:ring-amber-500">
-                  <option value="">All Challenges</option>
-                  <option value="easy">Novice</option>
-                  <option value="medium">Adept</option>
-                  <option value="hard">Master</option>
-                  <option value="expert">Legendary</option>
-                </select>
-              </div>
-
-              <div className="space-y-3">
-                <label className="font-medieval block text-sm text-amber-200">
-                  Party Size
-                </label>
-                <select className="w-full p-3 bg-[#1a0f0f] rounded-lg border border-amber-900/50
-                                 text-amber-100 font-cinzel focus:ring-2 focus:ring-amber-500">
-                  <option value="">Any Party Size</option>
-                  <option value="2">Solo Duo</option>
-                  <option value="3-4">Small Party (3-4)</option>
-                  <option value="5+">Full Party (5+)</option>
-                </select>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Games grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {MOCK_GAMES.map(game => (
-            <GameCard
-              key={game.id}
-              game={game}
-              onClick={handleGameClick}
-            />
-          ))}
+          {filteredGames.length > 0 ? (
+            filteredGames.map(game => (
+              <GameCard
+                key={game.id}
+                game={game}
+                onClick={handleGameClick}
+              />
+            ))
+          ) : (
+            <div className="col-span-full text-center text-gray-400 py-8">
+              {games.length === 0 ? 'Loading games...' : 'No games match your filters'}
+            </div>
+          )}
         </div>
       </div>
+
+      <GameDetailsModal
+        game={selectedGame}
+        isOpen={isGameDetailsOpen}
+        onClose={() => setIsGameDetailsOpen(false)}
+        onContactOwner={handleContactOwner}
+      />
     </div>
   );
 };
