@@ -45,8 +45,8 @@ export interface CreateGameData {
   category: GameCategory;
   condition: GameCondition;
   numberOfPlayers: number;
-  availableFrom: string; 
-  availableTo: string;   
+  availableFrom: string;
+  availableTo: string;
   difficulty: GameDifficulty;
 }
 
@@ -62,7 +62,7 @@ export interface GameCardData {
   id: string;
   title: string;
   description: string;
-  imageUrl: string;
+  images: string[];  
   category: GameCategory;
   difficulty: GameDifficulty;
   condition: GameCondition;

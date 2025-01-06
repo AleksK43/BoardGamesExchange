@@ -19,7 +19,7 @@ const GamesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState<'title' | 'city'>('title');
   const [showFilters, setShowFilters] = useState(false);
-  const [games, setGames] = useState<Game[]>([]);
+  const [games, setGames] = useState<GameCardData[]>([]);
   const [selectedGame, setSelectedGame] = useState<GameCardData | null>(null);
   const [isGameDetailsOpen, setIsGameDetailsOpen] = useState(false);
   const [filters, setFilters] = useState<IGameFilters>({
@@ -34,6 +34,54 @@ const GamesPage: React.FC = () => {
   const { showNotification } = useNotification();
   const { startLoading, stopLoading } = useLoading();
 
+  // Funkcja mapująca pojedynczą grę
+  const mapGameToCardData = async (game: Game): Promise<GameCardData> => {
+    try {
+      // Pobierz obrazy dla gry
+      const gameImages = await gameService.getGameImages(game.id);
+      // Mapuj wszystkie URLe obrazów
+      const imageUrls = gameImages.map(img => img.data);
+
+      return {
+        id: game.id.toString(),
+        title: game.title,
+        description: game.description,
+        images: imageUrls,
+        category: game.category || 'board',
+        difficulty: game.difficulty || 'medium',
+        condition: game.condition,
+        numberOfPlayers: game.numberOfPlayers,
+        availableFrom: game.availableFrom,
+        availableTo: game.availableTo,
+        owner: {
+          id: game.owner.id.toString(),
+          name: `${game.owner.firstname} ${game.owner.lastname}`.trim() || 'Anonymous',
+          city: game.owner.city || 'Unknown location'
+        }
+      };
+    } catch (error) {
+      console.error('Error mapping game:', error);
+      // W przypadku błędu, zwróć grę z pustą tablicą obrazów
+      return {
+        id: game.id.toString(),
+        title: game.title,
+        description: game.description,
+        images: [],
+        category: game.category || 'board',
+        difficulty: game.difficulty || 'medium',
+        condition: game.condition,
+        numberOfPlayers: game.numberOfPlayers,
+        availableFrom: game.availableFrom,
+        availableTo: game.availableTo,
+        owner: {
+          id: game.owner.id.toString(),
+          name: `${game.owner.firstname} ${game.owner.lastname}`.trim() || 'Anonymous',
+          city: game.owner.city || 'Unknown location'
+        }
+      };
+    }
+  };
+
   const fetchGames = useCallback(async () => {
     if (!isAuthenticated) return;
     
@@ -42,7 +90,11 @@ const GamesPage: React.FC = () => {
       const gamesData = await gameService.getAllGames();
       
       if (Array.isArray(gamesData)) {
-        setGames(gamesData);
+        // Mapuj wszystkie gry równolegle
+        const mappedGames = await Promise.all(
+          gamesData.map(game => mapGameToCardData(game))
+        );
+        setGames(mappedGames);
       } else {
         setGames([]);
       }
@@ -59,26 +111,6 @@ const GamesPage: React.FC = () => {
     fetchGames();
   }, [fetchGames]);
 
-  const mapToGameCardData = useCallback((game: Game): GameCardData => {
-    return {
-      id: game.id.toString(),
-      title: game.title,
-      description: game.description,
-      imageUrl: '',
-      category: game.category || 'board',
-      difficulty: game.difficulty || 'medium',
-      condition: game.condition,
-      numberOfPlayers: game.numberOfPlayers,
-      availableFrom: game.availableFrom,
-      availableTo: game.availableTo,
-      owner: {
-        id: game.owner.id.toString(),
-        name: `${game.owner.firstname} ${game.owner.lastname}`.trim() || 'Anonymous',
-        city: game.owner.city || 'Unknown location'
-      }
-    };
-  }, []);
-
   const handleSearch = (term: string, type: 'title' | 'city') => {
     setSearchTerm(term);
     setSearchType(type);
@@ -94,57 +126,54 @@ const GamesPage: React.FC = () => {
   };
 
   const filteredGames = useMemo(() => {
-    return games
-      .filter(game => {
-        // Search filtering
-        if (searchTerm) {
-          if (searchType === 'city') {
-            if (!game.owner.city?.toLowerCase().includes(searchTerm.toLowerCase())) {
-              return false;
-            }
-          } else {
-            if (!game.title.toLowerCase().includes(searchTerm.toLowerCase())) {
-              return false;
-            }
+    return games.filter(game => {
+      // Search filtering
+      if (searchTerm) {
+        if (searchType === 'city') {
+          if (!game.owner.city?.toLowerCase().includes(searchTerm.toLowerCase())) {
+            return false;
           }
-        }
-
-        // Category filter
-        if (filters.category && game.category !== filters.category) {
-          return false;
-        }
-
-        // Condition filter
-        if (filters.condition && game.condition !== filters.condition) {
-          return false;
-        }
-
-        // Difficulty filter
-        if (filters.difficulty && game.difficulty !== filters.difficulty) {
-          return false;
-        }
-
-        // Number of players filter
-        if (filters.minPlayers && game.numberOfPlayers < filters.minPlayers) {
-          return false;
-        }
-        if (filters.maxPlayers && game.numberOfPlayers > filters.maxPlayers) {
-          return false;
-        }
-
-        // City filter from advanced filters
-        if (filters.city && game.owner.city) {
-          const cityMatch = game.owner.city.toLowerCase().includes(filters.city.toLowerCase());
-          if (!cityMatch) {
+        } else {
+          if (!game.title.toLowerCase().includes(searchTerm.toLowerCase())) {
             return false;
           }
         }
+      }
 
-        return true;
-      })
-      .map(mapToGameCardData)
-      .filter(Boolean) as GameCardData[];
-  }, [games, searchTerm, searchType, filters, mapToGameCardData]);
+      // Category filter
+      if (filters.category && game.category !== filters.category) {
+        return false;
+      }
+
+      // Condition filter
+      if (filters.condition && game.condition !== filters.condition) {
+        return false;
+      }
+
+      // Difficulty filter
+      if (filters.difficulty && game.difficulty !== filters.difficulty) {
+        return false;
+      }
+
+      // Number of players filter
+      if (filters.minPlayers && game.numberOfPlayers < filters.minPlayers) {
+        return false;
+      }
+      if (filters.maxPlayers && game.numberOfPlayers > filters.maxPlayers) {
+        return false;
+      }
+
+      // City filter from advanced filters
+      if (filters.city && game.owner.city) {
+        const cityMatch = game.owner.city.toLowerCase().includes(filters.city.toLowerCase());
+        if (!cityMatch) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [games, searchTerm, searchType, filters]);
 
   if (!isAuthenticated) {
     return (
@@ -197,11 +226,12 @@ const GamesPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-4">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`px-4 py-2.5 rounded-lg transition-all duration-200 flex items-center 
-                         justify-center gap-2 font-medieval w-full sm:w-auto
-                         ${showFilters 
-                           ? 'bg-amber-800/50 text-amber-100 border-2 border-amber-500/50' 
-                           : 'bg-amber-900/20 text-amber-400 hover:bg-amber-900/30 hover:text-amber-300'
+                className={`px-4 py-2.5 rounded-lg transition-all duration-200 
+                         flex items-center justify-center gap-2 font-medieval 
+                         w-full sm:w-auto ${
+                           showFilters 
+                             ? 'bg-amber-800/50 text-amber-100 border-2 border-amber-500/50' 
+                             : 'bg-amber-900/20 text-amber-400 hover:bg-amber-900/30 hover:text-amber-300'
                          }`}
               >
                 <Filter className="h-5 w-5" />

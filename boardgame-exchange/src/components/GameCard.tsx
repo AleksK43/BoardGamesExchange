@@ -3,6 +3,7 @@ import { Users, MapPin, Star, Calendar, Shield, Swords } from 'lucide-react';
 import { GameCardData } from '../types/game';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale/pl';
+import ImageSlider from './ImageSlider';
 
 interface GameCardProps {
   game: GameCardData;
@@ -31,29 +32,28 @@ const GameCard: React.FC<GameCardProps> = ({ game, onClick }) => {
                  hover:border-amber-500/50 transition-all duration-300 cursor-pointer
                  transform hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-900/20"
     >
-      {/* Image Container */}
+      {/* Image Container with ImageSlider */}
       <div className="relative aspect-[4/3] overflow-hidden">
-        <img
-          src={game.imageUrl || '/placeholder-game.jpg'}
-          alt={game.title}
-          className="w-full h-full object-cover transition-transform duration-500 
-                   group-hover:scale-110"
+        <ImageSlider 
+          images={game.images} 
+          className="absolute inset-0"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#1a0f0f] via-[#1a0f0f]/60 to-transparent" />
         
         {/* Game Info Badges */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
+        <div className="absolute bottom-0 left-0 right-0 p-4 z-20">
           <div className="flex flex-wrap items-center gap-2">
             {/* Condition Badge */}
             <div className="flex items-center gap-1.5 bg-amber-900/80 backdrop-blur-sm 
-                          px-2.5 py-1.5 rounded-full text-amber-100 text-sm font-medieval">
+                          px-2.5 py-1.5 rounded-full text-amber-100 text-sm font-medieval
+                          border border-amber-500/30">
               <Star className="w-4 h-4" />
               <span className="capitalize">{game.condition}</span>
             </div>
             
             {/* Difficulty Badge */}
             <div className="flex items-center gap-1.5 bg-amber-900/80 backdrop-blur-sm 
-                          px-2.5 py-1.5 rounded-full text-amber-100 text-sm font-medieval">
+                          px-2.5 py-1.5 rounded-full text-amber-100 text-sm font-medieval
+                          border border-amber-500/30">
               {getDifficultyIcon(game.difficulty)}
               <span className="capitalize">{game.difficulty}</span>
             </div>
@@ -65,7 +65,7 @@ const GameCard: React.FC<GameCardProps> = ({ game, onClick }) => {
       <div className="p-4 space-y-4">
         {/* Title */}
         <h3 className="font-medieval text-xl text-amber-100 leading-tight
-                     group-hover:text-amber-400 transition-colors">
+                     group-hover:text-amber-400 transition-colors line-clamp-1">
           {game.title}
         </h3>
 
@@ -101,7 +101,8 @@ const GameCard: React.FC<GameCardProps> = ({ game, onClick }) => {
         <div className="pt-3 border-t border-amber-900/30">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-600 to-amber-800 
-                          flex items-center justify-center text-amber-100 font-medieval">
+                          flex items-center justify-center text-amber-100 font-medieval
+                          border border-amber-500/30">
               {game.owner.name.charAt(0)}
             </div>
             <div>

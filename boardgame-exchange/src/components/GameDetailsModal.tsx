@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Users, MapPin, Calendar, Star, User, MessageCircle } from 'lucide-react';
 import { GameCardData } from '../types/game';
 import { format } from 'date-fns';
+import ImageSlider from './ImageSlider';
 
 interface GameDetailsModalProps {
   game: GameCardData | null;
@@ -42,18 +43,19 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                        overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header Image */}
-              <div className="relative h-64 overflow-hidden rounded-t-xl">
-                <img
-                  src={game.imageUrl || '/placeholder-game.jpg'}
-                  alt={game.title}
-                  className="w-full h-full object-cover"
+              {/* Header Image with ImageSlider */}
+              <div className="relative h-96 overflow-hidden rounded-t-xl">
+                <ImageSlider
+                  images={game.images}
+                  className="h-full w-full"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#1a0f0f] to-transparent" />
+                
                 <button
                   onClick={onClose}
-                  className="absolute top-4 right-4 text-amber-100 hover:text-amber-200 
-                           transition-colors bg-black/20 p-2 rounded-full"
+                  className="absolute top-4 right-4 z-20 text-amber-100 hover:text-amber-200 
+                           transition-colors bg-gradient-to-r from-amber-900/80 to-amber-800/80
+                           p-2 rounded-full border border-amber-500/30
+                           hover:from-amber-800/80 hover:to-amber-700/80"
                 >
                   <X size={24} />
                 </button>
@@ -73,7 +75,7 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                       </div>
                       <div className="flex items-center gap-1">
                         <Star size={16} />
-                        <span>{game.difficulty}</span>
+                        <span className="capitalize">{game.condition}</span>
                       </div>
                     </div>
                   </div>
@@ -99,7 +101,7 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
 
                 {/* Details */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div className="bg-amber-900/20 rounded-lg p-4">
+                  <div className="bg-amber-900/20 rounded-lg p-4 border border-amber-900/30">
                     <h4 className="font-medieval text-amber-200 mb-2">Availability</h4>
                     <div className="flex items-center gap-2 text-amber-100/80">
                       <Calendar size={16} />
@@ -109,11 +111,17 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                       </span>
                     </div>
                   </div>
-                  <div className="bg-amber-900/20 rounded-lg p-4">
-                    <h4 className="font-medieval text-amber-200 mb-2">Condition</h4>
-                    <div className="flex items-center gap-2 text-amber-100/80">
-                      <Star size={16} />
-                      <span className="capitalize">{game.condition}</span>
+                  <div className="bg-amber-900/20 rounded-lg p-4 border border-amber-900/30">
+                    <h4 className="font-medieval text-amber-200 mb-2">Game Details</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-amber-100/80">
+                        <Star size={16} />
+                        <span className="capitalize">Condition: {game.condition}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-amber-100/80">
+                        <Users size={16} />
+                        <span>Players: {game.numberOfPlayers}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -124,7 +132,8 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                     onClick={onContactOwner}
                     className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r 
                              from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800
-                             text-amber-100 rounded-lg transition-colors font-medieval"
+                             text-amber-100 rounded-lg transition-colors font-medieval
+                             border border-amber-500/30"
                   >
                     <MessageCircle size={18} />
                     <span>Contact Owner</span>
