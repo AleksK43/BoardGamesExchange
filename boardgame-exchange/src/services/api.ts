@@ -1,4 +1,5 @@
 import axios from 'axios';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Game, CreateGameData, BoardGameImageDTO } from '../types/game';
 import { UserDTO } from '../types/user';
 import { BorrowGameRequestDTO } from '../types/requests';
@@ -40,13 +41,53 @@ api.interceptors.response.use(
 );
 
 export const gameService = {
-
   requestBorrow: async (gameId: number): Promise<void> => {
     try {
       await api.put(`/board-game/borrow-request/${gameId}/request`);
     } catch (error) {
       console.error('Failed to request game borrow:', error);
-      throw new Error('Failed to request game borrow');
+      throw error;
+    }
+  },
+
+  getBorrowRequests: async (): Promise<BorrowGameRequestDTO[]> => {
+    try {
+      const response = await api.get('/board-game/borrow-request/games');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch borrow requests:', error);
+      throw error;
+    }
+  },
+
+  getMyBorrowRequests: async (): Promise<BorrowGameRequestDTO[]> => {
+    try {
+      const response = await api.get('/board-game/borrow-request/my');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch my borrow requests:', error);
+      throw error;
+    }
+  },
+
+  acceptBorrowRequest: async (borrowRequestId: number): Promise<void> => {
+    try {
+      await api.put(`/board-game/borrow-request/${borrowRequestId}/agree`);
+    } catch (error) {
+      console.error('Failed to accept borrow request:', error);
+      throw error;
+    }
+  },
+
+  returnGame: async (borrowRequestId: number, data: { comment: string; rating: number }): Promise<void> => {
+    try {
+      await api.put(`/board-game/borrow-request/${borrowRequestId}/return`, {
+        comment: data.comment,
+        rating: data.rating
+      });
+    } catch (error) {
+      console.error('Failed to return game:', error);
+      throw error;
     }
   },
 
@@ -70,29 +111,8 @@ export const gameService = {
     }
   },
 
-  getBorrowRequests: async (): Promise<BorrowGameRequestDTO[]> => {
-    const response = await api.get('/board-game/borrow-request/games');
-    return response.data;
-  },
-
-  getMyBorrowRequests: async (): Promise<BorrowGameRequestDTO[]> => {
-    const response = await api.get('/board-game/borrow-request/my');
-    return response.data;
-  },
-
   requestBorrowGame: async (gameId: number): Promise<void> => {
     await api.put(`/board-game/borrow-request/${gameId}/request`);
-  },
-
-  acceptBorrowRequest: async (borrowRequestId: number): Promise<void> => {
-    await api.put(`/board-game/borrow-request/${borrowRequestId}/agree`);
-  },
-
-  returnGame: async (borrowRequestId: number, comment: string, rating: number): Promise<void> => {
-    await api.put(`/board-game/borrow-request/${borrowRequestId}/return`, {
-      comment,
-      rating
-    });
   },
 
   deleteBorrowRequest: async (borrowRequestId: number): Promise<void> => {
@@ -192,7 +212,30 @@ export const gameService = {
       console.error('Failed to fetch game images:', error);
       throw new Error('Failed to fetch game images');
     }
-  }
+  },
+
+
+
+  // Rate user method
+  rateUser: async (userId: number, data: { comment: string; rating: number }): Promise<void> => {
+    try {
+      await api.post(`/review/users/add`, {
+        reviewedUserId: userId,
+        rating: data.rating,
+        comment: data.comment
+      });
+    } catch (error) {
+      console.error('Failed to rate user:', error);
+      throw error;
+    }
+  },
+
+
+ 
+
+ 
+
+  
 };
 
 export const authService = {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Users, MapPin, Calendar, Star, User, Scroll } from 'lucide-react';
+import { X, Users, MapPin, Calendar, Star, User, Crown, Book } from 'lucide-react';
 import { format } from 'date-fns';
 import type { GameCardData } from '../types/game';
 import type { GameReview, ReviewRating } from '../types/review';
@@ -8,6 +8,7 @@ import { gameService } from '../services/api';
 import { useAuth } from '../providers/AuthProvider';
 import { useNotification } from '../providers/NotificationProvider';
 import GameReviews from './GameReviews';
+import BorrowingProcess from './BorrowingProcess';
 
 interface GameDetailsModalProps {
   game: GameCardData | null;
@@ -31,52 +32,66 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
     starsCount_4: 0,
     starsCount_5: 0
   });
-  const [isRequesting, setIsRequesting] = useState(false);
+  const [showBorrowProcess, setShowBorrowProcess] = useState(false);
+  const [isBorrowed, setIsBorrowed] = useState(false);
+  const [borrowRequestId, setBorrowRequestId] = useState<number | undefined>();
 
   useEffect(() => {
-    const fetchReviews = async () => {
-      if (!game || !isOpen) return;
+    const fetchGameData = async () => {
+      if (!game || !isOpen || !user) return;
   
       try {
+        // Fetch reviews
         const reviewsResult = await gameService.getGameReviews(Number(game.id));
         setReviews(reviewsResult);
-      } catch (error) {
-        console.error('Error fetching reviews:', error);
-        setReviews([]);
-      }
-  
-      try {
+        
+        // Fetch rating
         const ratingResult = await gameService.getGameRating(Number(game.id));
         setRating(ratingResult);
+        
+        // Check if user has borrowed this game
+        const borrowRequests = await gameService.getMyBorrowRequests();
+        const activeRequest = borrowRequests.find(req => 
+          req.boardGame.id === Number(game.id) && !req.returnDate
+        );
+        
+        if (activeRequest) {
+          setIsBorrowed(true);
+          setBorrowRequestId(activeRequest.id);
+        } else {
+          setIsBorrowed(false);
+          setBorrowRequestId(undefined);
+        }
       } catch (error) {
-        console.error('Error fetching rating:', error);
-        setRating({
-          average: 0,
-          starsCount_1: 0,
-          starsCount_2: 0,
-          starsCount_3: 0,
-          starsCount_4: 0,
-          starsCount_5: 0
-        });
+        console.error('Error fetching game data:', error);
+        showNotification('error', 'Failed to load game details');
       }
     };
 
-    fetchReviews();
-  }, [game, isOpen, showNotification]);
+    fetchGameData();
+  }, [game, isOpen, user, showNotification]);
 
-  const handleBorrowRequest = async () => {
-    if (!game || !user) return;
-
-    try {
-      setIsRequesting(true);
-      await gameService.requestBorrow(Number(game.id));
-      showNotification('success', 'Borrow request sent successfully!');
-      onClose();
-    } catch (error) {
-      console.error('Error requesting borrow:', error);
-      showNotification('error', 'Failed to send borrow request');
-    } finally {
-      setIsRequesting(false);
+  const handleStatusChange = async () => {
+    // Refresh the game data after status change
+    if (game) {
+      try {
+        const borrowRequests = await gameService.getMyBorrowRequests();
+        const activeRequest = borrowRequests.find(req => 
+          req.boardGame.id === Number(game.id) && !req.returnDate
+        );
+        
+        if (activeRequest) {
+          setIsBorrowed(true);
+          setBorrowRequestId(activeRequest.id);
+        } else {
+          setIsBorrowed(false);
+          setBorrowRequestId(undefined);
+        }
+        
+        setShowBorrowProcess(false);
+      } catch (error) {
+        console.error('Error updating game status:', error);
+      }
     }
   };
 
@@ -107,7 +122,7 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                        overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header Image with ImageSlider */}
+              {/* Header Image */}
               <div className="relative h-96 overflow-hidden rounded-t-xl">
                 {game.images && game.images.length > 0 ? (
                   <img
@@ -118,7 +133,7 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                 ) : (
                   <div className="w-full h-full bg-gradient-to-b from-amber-900/20 to-amber-950/20 
                                flex items-center justify-center">
-                    <Scroll className="w-16 h-16 text-amber-500/50" />
+                    <Book className="w-16 h-16 text-amber-500/50" />
                   </div>
                 )}
                 
@@ -132,7 +147,6 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                   <X size={24} />
                 </button>
 
-                {/* Overlay gradient */}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#1a0f0f] via-transparent to-transparent" />
               </div>
 
@@ -194,6 +208,10 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                         <span className="capitalize">Condition: {game.condition}</span>
                       </div>
                       <div className="flex items-center gap-2 text-amber-100/80">
+                        <Crown size={16} />
+                        <span className="capitalize">Difficulty: {game.difficulty}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-amber-100/80">
                         <Users size={16} />
                         <span>Players: {game.numberOfPlayers}</span>
                       </div>
@@ -201,33 +219,43 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                   </div>
                 </div>
 
-                {/* Reviews Section */}
-                <div className="mb-6">
-                  <h3 className="text-xl font-medieval text-amber-200 mb-4">Reviews & Ratings</h3>
-                  <GameReviews reviews={reviews} rating={rating} />
-                </div>
+                {/* Borrowing Process or Reviews */}
+                {showBorrowProcess ? (
+                  <div className="mb-6">
+                    <BorrowingProcess
+                      gameId={Number(game.id)}
+                      borrowRequestId={borrowRequestId}
+                      mode={isBorrowed ? 'borrowed' : 'request'}
+                      onClose={() => setShowBorrowProcess(false)}
+                      onStatusChange={handleStatusChange}
+                    />
+                  </div>
+                ) : (
+                  <div className="mb-6">
+                    <h3 className="text-xl font-medieval text-amber-200 mb-4">Reviews & Ratings</h3>
+                    <GameReviews reviews={reviews} rating={rating} />
+                  </div>
+                )}
 
                 {/* Actions */}
-                {!isOwnGame && (
-                  <div className="flex justify-end gap-4">
+                {!isOwnGame && !showBorrowProcess && (
+                  <div className="flex justify-end">
                     <button
-                      onClick={handleBorrowRequest}
-                      disabled={isRequesting}
+                      onClick={() => setShowBorrowProcess(true)}
                       className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r 
                                from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800
                                text-amber-100 rounded-lg transition-colors font-medieval
                                disabled:opacity-50 disabled:cursor-not-allowed
                                border border-amber-500/30"
                     >
-                      {isRequesting ? (
+                      {isBorrowed ? (
                         <>
-                          <div className="w-5 h-5 border-2 border-amber-100 border-t-transparent 
-                                      rounded-full animate-spin" />
-                          <span>Sending Request...</span>
+                          <Book size={18} />
+                          <span>Return Game</span>
                         </>
                       ) : (
                         <>
-                          <Scroll size={18} />
+                          <Book size={18} />
                           <span>Request Borrow</span>
                         </>
                       )}
