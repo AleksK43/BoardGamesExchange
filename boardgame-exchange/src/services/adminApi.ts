@@ -12,6 +12,20 @@ export const adminService = {
         }
     },
 
+    getDeletedUsers: async (): Promise<AdminUser[]> => {
+        try {
+            const response = await api.get('/admin/users/all');
+            // Dokładniejsze filtrowanie usuniętych użytkowników
+            return response.data.filter((user: AdminUser) => 
+                user.removeDate !== null && 
+                user.removeDate !== undefined
+            );
+        } catch (error) {
+            console.error('Błąd podczas pobierania usuniętych użytkowników:', error);
+            throw error;
+        }
+    },
+
     getStandardUsers: async (): Promise<AdminUser[]> => {
         try {
             const response = await api.get('/admin/users/standard');
@@ -92,32 +106,61 @@ export const adminService = {
         }
     },
 
+    
+
     blockUser: async (userId: number): Promise<AdminUser> => {
         try {
+            console.log(`Próba zablokowania użytkownika o ID: ${userId}`);
             const response = await api.put(`/admin/users/${userId}/block`);
-            console.log('User after block:', response.data); // Dodaj logowanie
-            return response.data;
+            
+            console.log('Surowe dane odpowiedzi:', response.data);
+    
+            const updatedUser: AdminUser = {
+                ...response.data,
+                blocked: true  
+            };
+    
+            console.log('Przetworzone dane użytkownika:', updatedUser);
+            
+            return updatedUser;
         } catch (error) {
-            console.error('Błąd podczas blokowania użytkownika:', error);
+            console.error('Błąd blokowania użytkownika:', error);
             throw error;
         }
     },
 
     activateUser: async (userId: number): Promise<AdminUser> => {
         try {
+            console.log(`Próba aktywacji użytkownika o ID: ${userId}`);
             const response = await api.put(`/admin/users/${userId}/activate`);
+            console.log('Odpowiedź po aktywacji:', response.data);
             return response.data;
         } catch (error) {
-            console.error('Błąd podczas aktywowania użytkownika:', error);
+            console.error('Błąd aktywacji użytkownika:', error);
             throw error;
         }
     },
 
-    removeUser: async (userId: number): Promise<void> => {
+    getBlockedUsers: async (): Promise<AdminUser[]> => {
         try {
-            await api.delete(`/admin/users/${userId}/remove`);
+            const response = await api.get('/admin/users/all');
+            return response.data.filter((user: AdminUser) => 
+                user.blocked === true
+            );
         } catch (error) {
-            console.error('Błąd podczas usuwania użytkownika:', error);
+            console.error('Błąd pobierania zablokowanych użytkowników:', error);
+            throw error;
+        }
+    },
+
+    removeUser: async (userId: number): Promise<AdminUser> => {
+        try {
+            console.log(`Próba usunięcia użytkownika o ID: ${userId}`);
+            const response = await api.delete(`/admin/users/${userId}/remove`);
+            console.log('Odpowiedź po usunięciu:', response.data);
+            return response.data;
+        } catch (error) {
+            console.error('Błąd usuwania użytkownika:', error);
             throw error;
         }
     },

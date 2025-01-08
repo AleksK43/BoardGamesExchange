@@ -1,25 +1,19 @@
 import React, { useState, useEffect } from 'react';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Trash2, RefreshCw } from 'lucide-react';
+import { format, isValid } from 'date-fns'; // Dodaj import isValid
 import { adminService } from '../../../services/adminApi';
 import { useNotification } from '../../../providers/NotificationProvider';
 import { AdminUser } from '../../../types/admin';
-import { format } from 'date-fns';
 
 const DeletedUsers: React.FC = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(false);
   const { showNotification } = useNotification();
 
-  useEffect(() => {
-    fetchDeletedUsers();
-  }, []);
-
   const fetchDeletedUsers = async () => {
     try {
       setLoading(true);
-      const allUsers = await adminService.getAllUsers();
-      const deletedUsers = allUsers.filter(user => user.removeDate);
+      const deletedUsers = await adminService.getDeletedUsers();
       setUsers(deletedUsers);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
@@ -29,15 +23,30 @@ const DeletedUsers: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    fetchDeletedUsers();
+  }, []);
+
   const handleRestore = async (userId: number) => {
     try {
-      await adminService.activateUser(userId);
+      const response = await adminService.activateUser(userId);
+      console.log('Odpowiedź serwera:', response);
       showNotification('success', 'Użytkownik został przywrócony');
       fetchDeletedUsers();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
+      console.error('Pełny błąd:', error);
       showNotification('error', 'Błąd podczas przywracania użytkownika');
     }
+  };
+
+  // Bezpieczna funkcja formatowania daty
+  const formatSafeDate = (date: string | Date | null, defaultText: string = 'Nieznana data') => {
+    if (!date) return defaultText;
+    
+    const parsedDate = new Date(date);
+    return isValid(parsedDate) 
+      ? format(parsedDate, 'dd.MM.yyyy') 
+      : defaultText;
   };
 
   return (
@@ -68,7 +77,7 @@ const DeletedUsers: React.FC = () => {
                   <span>{user.email}</span>
                   <span>•</span>
                   <span>
-                    Usunięty: {format(new Date(user.removeDate || ''), 'dd.MM.yyyy')}
+                    Usunięty: {formatSafeDate(user.removeDate || '', 'Nieznana data usunięcia')}
                   </span>
                 </div>
               </div>
@@ -87,7 +96,7 @@ const DeletedUsers: React.FC = () => {
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-red-200/70">
               <div>
                 <strong className="text-red-200">Data rejestracji:</strong>{' '}
-                {format(new Date(user.registrationDate), 'dd.MM.yyyy')}
+                {formatSafeDate(user.registrationDate, 'Nieznana data rejestracji')}
               </div>
               {user.city && (
                 <div>
