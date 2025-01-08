@@ -1,5 +1,5 @@
 import axios from 'axios';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 import { Game, CreateGameData, BoardGameImageDTO } from '../types/game';
 import { UserDTO } from '../types/user';
 import { BorrowGameRequestDTO } from '../types/requests';

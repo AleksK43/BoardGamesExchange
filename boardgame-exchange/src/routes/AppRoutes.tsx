@@ -4,7 +4,7 @@ import { AnimatePresence } from 'framer-motion';
 import HomePage from '../pages/HomePage';
 import GamesPage from '../pages/GamesPage';
 import AddGame from '../pages/Games/components/AddGame';
-import AdminPanel from '../pages/AdminPanel';
+import AdminPanel from '../pages/AdminPanel/AdminPanel';
 import { useLoading } from '../providers/LoadingProvider';
 import { Layout } from '../components/layout/Layout';
 
@@ -36,7 +36,9 @@ const AppRoutes = () => {
         <Route path="/app" element={<Layout />}>
           <Route path="games" element={<GamesPage />} />
           <Route path="games/manage" element={<AddGame />} />
-          <Route path="admin" element={<AdminPanel />} />
+          <Route path="admin">
+            <Route path="panel" element={<AdminPanel />} />
+          </Route>
         </Route>
       </Routes>
     </AnimatePresence>

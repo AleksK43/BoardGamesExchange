@@ -81,15 +81,15 @@ const Navbar: React.FC = () => {
                   </Link>
 
                   {isAdmin && (
-                    <Link 
-                      to="/app/admin"
-                      className="font-medieval text-amber-100 px-4 py-2 rounded-lg 
-                               hover:bg-amber-900/30 transition-all duration-200 
-                               hover:text-amber-400 flex items-center gap-2"
-                    >
-                      <Settings size={20} />
-                      <span>Master's Chamber</span>
-                    </Link>
+                     <Link 
+                     to="/app/admin/panel"
+                     className="font-medieval text-amber-100 px-4 py-2 rounded-lg 
+                              hover:bg-amber-900/30 transition-all duration-200 
+                              hover:text-amber-400 flex items-center gap-2"
+                   >
+                     <Settings size={20} />
+                     <span>Master's Chamber</span>
+                   </Link>
                   )}
 
                   {isBasicUser && (
