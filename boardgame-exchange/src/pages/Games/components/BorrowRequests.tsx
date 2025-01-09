@@ -1,21 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useNotification } from '../../../providers/NotificationProvider';
 import { useLoading } from '../../../providers/LoadingProvider';
+import { useAuth } from '../../../providers/AuthProvider';
 import { gameService } from '../../../services/api';
-import { Check, X, Clock } from 'lucide-react';
+import { Clock, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { BorrowGameRequestDTO } from '../../../types/requests';
+import BorrowingProcess from '../../../components/BorrowingProcess';
 
 const BorrowRequests: React.FC = () => {
   const { showNotification } = useNotification();
   const { startLoading, stopLoading } = useLoading();
+  const { user } = useAuth();
   const [requests, setRequests] = useState<BorrowGameRequestDTO[]>([]);
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
+  const [showBorrowingProcess, setShowBorrowingProcess] = useState(false);
 
   const fetchRequests = async () => {
     try {
       startLoading();
       const response = await gameService.getBorrowRequests();
-      setRequests(response);
+      // Filtrujemy tylko oczekujące requesty i te w trakcie zwrotu
+      const pendingRequests = response.filter(req => 
+        (!req.acceptDate || (req.acceptDate && !req.returnDate)) &&
+        req.boardGame.owner.id === user?.id
+      );
+      setRequests(pendingRequests);
     } catch (error) {
       console.error('Failed to fetch borrow requests:', error);
       showNotification('error', 'Failed to load borrow requests');
@@ -28,26 +38,53 @@ const BorrowRequests: React.FC = () => {
     fetchRequests();
   }, []);
 
-  const handleAccept = async (requestId: number) => {
-    try {
-      await gameService.acceptBorrowRequest(requestId);
-      showNotification('success', 'Request accepted successfully');
-      fetchRequests();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      showNotification('error', 'Failed to accept request');
-    }
+  const handleManageRequest = (requestId: number) => {
+    setSelectedRequestId(requestId);
+    setShowBorrowingProcess(true);
   };
 
-  const handleReject = async (requestId: number) => {
-    try {
-      await gameService.deleteBorrowRequest(requestId);
-      showNotification('success', 'Request rejected successfully');
-      fetchRequests();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      showNotification('error', 'Failed to reject request');
-    }
+  const renderRequest = (request: BorrowGameRequestDTO) => {
+    const isOwner = request.boardGame.owner.id === user?.id;
+    if (!isOwner) return null;
+
+    return (
+      <div 
+        key={request.id}
+        className="bg-gradient-to-r from-amber-900/20 to-amber-950/20 
+                 rounded-lg border border-amber-900/30 p-4"
+      >
+        <div className="flex justify-between">
+          <div>
+            <h3 className="font-medieval text-amber-100 text-lg">
+              {request.boardGame.title}
+            </h3>
+            <div className="space-y-1 mt-2">
+              <p className="text-amber-200/70 text-sm">
+                Requested by: {request.borrowedToUser.firstname} {request.borrowedToUser.lastname}
+              </p>
+              <p className="text-amber-200/70 text-sm">
+                Requested on: {format(new Date(request.createdDate), 'PP')}
+              </p>
+              {request.acceptDate && (
+                <p className="text-green-400/70 text-sm">
+                  Accepted on: {format(new Date(request.acceptDate), 'PP')}
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <div>
+            <button
+              onClick={() => handleManageRequest(request.id)}
+              className="px-4 py-2 bg-amber-700/80 rounded-lg hover:bg-amber-600/80 
+                       transition-colors text-amber-100 font-medieval"
+            >
+              Manage Request
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -61,48 +98,44 @@ const BorrowRequests: React.FC = () => {
         </div>
       ) : (
         <div className="grid gap-4">
-          {requests.map((request) => (
-            <div 
-              key={request.id}
-              className="bg-gradient-to-r from-amber-900/20 to-amber-950/20 
-                       rounded-lg border border-amber-900/30 p-4"
+          {requests.map(renderRequest)}
+        </div>
+      )}
+
+      {showBorrowingProcess && selectedRequestId && (
+        <div 
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            setShowBorrowingProcess(false);
+            setSelectedRequestId(null);
+          }}
+        >
+          <div 
+            className="w-full max-w-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => {
+                setShowBorrowingProcess(false);
+                setSelectedRequestId(null);
+              }}
+              className="absolute -top-4 -right-4 w-8 h-8 bg-red-900/80 text-red-100 
+                       rounded-full flex items-center justify-center hover:bg-red-800 
+                       transition-colors z-10"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medieval text-amber-100 text-lg">
-                    {request.boardGame.title}
-                  </h3>
-                  <p className="text-amber-200/70 text-sm">
-                    Requested by: {request.borrowedToUser.firstname} {request.borrowedToUser.lastname}
-                  </p>
-                  <p className="text-amber-200/70 text-sm">
-                    Requested on: {format(new Date(request.createdDate), 'PP')}
-                  </p>
-                </div>
-                
-                {!request.acceptDate && !request.returnDate && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleAccept(request.id)}
-                      className="p-2 bg-green-900/80 rounded-full hover:bg-green-800 
-                               transition-colors text-green-100"
-                      title="Accept request"
-                    >
-                      <Check size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleReject(request.id)}
-                      className="p-2 bg-red-900/80 rounded-full hover:bg-red-800 
-                               transition-colors text-red-100"
-                      title="Reject request"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+              <X size={16} />
+            </button>
+            <BorrowingProcess
+              borrowRequestId={selectedRequestId}
+              mode="manage"
+              onClose={() => {
+                setShowBorrowingProcess(false);
+                setSelectedRequestId(null);
+                fetchRequests();
+              }}
+              onStatusChange={fetchRequests}
+            />
+          </div>
         </div>
       )}
     </div>

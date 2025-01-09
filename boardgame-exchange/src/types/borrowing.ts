@@ -1,4 +1,3 @@
-// src/types/borrowing.ts
 
 export type BorrowingProcessMode = 'request' | 'manage' | 'borrowed';
 export type ProcessStep = 'request' | 'accepted' | 'return';

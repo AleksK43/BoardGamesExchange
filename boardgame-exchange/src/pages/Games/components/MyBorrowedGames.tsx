@@ -1,24 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useNotification } from '../../../providers/NotificationProvider';
 import { useLoading } from '../../../providers/LoadingProvider';
+import { useAuth } from '../../../providers/AuthProvider';
 import { gameService } from '../../../services/api';
-import { Book, CalendarDays, MapPin, Star } from 'lucide-react';
+import { Book, CalendarDays, MapPin, Star, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { BorrowGameRequestDTO } from '../../../types/requests';
+import BorrowingProcess from '../../../components/BorrowingProcess';
 
 const MyBorrowedGames: React.FC = () => {
   const { showNotification } = useNotification();
   const { startLoading, stopLoading } = useLoading();
+  const { user } = useAuth();
   const [borrowedGames, setBorrowedGames] = useState<BorrowGameRequestDTO[]>([]);
-  const [returningGame, setReturningGame] = useState<number | null>(null);
-  const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState('');
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
+  const [showBorrowingProcess, setShowBorrowingProcess] = useState(false);
 
   const fetchBorrowedGames = async () => {
     try {
       startLoading();
       const response = await gameService.getMyBorrowRequests();
-      setBorrowedGames(response);
+      // Filtrujemy tylko zaakceptowane wypożyczenia które nie zostały jeszcze zwrócone
+      const activeBorrows = response.filter(req => 
+        req.acceptDate && !req.returnDate && req.borrowedToUser.id === user?.id
+      );
+      setBorrowedGames(activeBorrows);
     } catch (error) {
       console.error('Failed to fetch borrowed games:', error);
       showNotification('error', 'Failed to load borrowed games');
@@ -31,18 +37,55 @@ const MyBorrowedGames: React.FC = () => {
     fetchBorrowedGames();
   }, []);
 
-  const handleReturn = async (requestId: number) => {
-    try {
-      await gameService.returnGame(requestId, comment, rating);
-      showNotification('success', 'Game returned successfully');
-      setReturningGame(null);
-      setComment('');
-      setRating(5);
-      fetchBorrowedGames();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      showNotification('error', 'Failed to return game');
-    }
+  const handleStartReturn = (requestId: number) => {
+    setSelectedRequestId(requestId);
+    setShowBorrowingProcess(true);
+  };
+
+  const renderGame = (game: BorrowGameRequestDTO) => {
+    const isBorrower = game.borrowedToUser.id === user?.id;
+    if (!isBorrower) return null;
+
+    return (
+      <div 
+        key={game.id}
+        className="bg-gradient-to-r from-amber-900/20 to-amber-950/20 
+                 rounded-lg border border-amber-900/30 p-4"
+      >
+        <div className="flex justify-between items-center">
+          <div className="space-y-2">
+            <h3 className="font-medieval text-amber-100 text-lg">
+              {game.boardGame.title}
+            </h3>
+            
+            <div className="flex items-center gap-6 text-sm text-amber-200/70">
+              <div className="flex items-center gap-1">
+                <MapPin size={16} />
+                <span>
+                  From: {game.boardGame.owner.firstname} {game.boardGame.owner.lastname}
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-1">
+                <CalendarDays size={16} />
+                <span>
+                  Borrowed: {format(new Date(game.acceptDate!), 'PP')}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <button
+            onClick={() => handleStartReturn(game.id)}
+            className="px-4 py-2 bg-amber-700/80 rounded-lg hover:bg-amber-600/80 
+                     transition-colors text-amber-100 font-medieval flex items-center gap-2"
+          >
+            <Star size={18} />
+            Return & Review
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -52,94 +95,48 @@ const MyBorrowedGames: React.FC = () => {
       {borrowedGames.length === 0 ? (
         <div className="text-center py-8">
           <Book className="w-16 h-16 text-amber-500 mx-auto mb-4" />
-          <p className="text-amber-200/70 font-crimson">No borrowed games yet</p>
+          <p className="text-amber-200/70 font-crimson">No active borrowed games</p>
         </div>
       ) : (
         <div className="grid gap-4">
-          {borrowedGames.map((game) => (
-            <div 
-              key={game.id}
-              className="bg-gradient-to-r from-amber-900/20 to-amber-950/20 
-                       rounded-lg border border-amber-900/30 p-4"
+          {borrowedGames.map(renderGame)}
+        </div>
+      )}
+
+      {showBorrowingProcess && selectedRequestId && (
+        <div 
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            setShowBorrowingProcess(false);
+            setSelectedRequestId(null);
+          }}
+        >
+          <div 
+            className="w-full max-w-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => {
+                setShowBorrowingProcess(false);
+                setSelectedRequestId(null);
+              }}
+              className="absolute -top-4 -right-4 w-8 h-8 bg-red-900/80 text-red-100 
+                       rounded-full flex items-center justify-center hover:bg-red-800 
+                       transition-colors z-10"
             >
-              <div className="flex justify-between">
-                <div className="space-y-2">
-                  <h3 className="font-medieval text-amber-100 text-lg">
-                    {game.boardGame.title}
-                  </h3>
-                  
-                  <div className="flex items-center gap-6 text-sm text-amber-200/70">
-                    <div className="flex items-center gap-1">
-                      <MapPin size={16} />
-                      <span>
-                        From: {game.boardGame.owner.firstname} {game.boardGame.owner.lastname}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center gap-1">
-                      <CalendarDays size={16} />
-                      <span>
-                        Borrowed: {format(new Date(game.acceptDate || game.createdDate), 'PP')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                {game.acceptDate && !game.returnDate && (
-                  returningGame === game.id ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            onClick={() => setRating(star)}
-                            className={`${
-                              star <= rating ? 'text-amber-400' : 'text-amber-700'
-                            } hover:text-amber-500 transition-colors`}
-                          >
-                            <Star size={20} />
-                          </button>
-                        ))}
-                      </div>
-                      <textarea
-                        value={comment}
-                        onChange={(e) => setComment(e.target.value)}
-                        placeholder="Leave a comment..."
-                        className="w-full bg-amber-900/20 rounded-lg p-2 text-amber-100
-                                 border border-amber-500/30 focus:border-amber-500 
-                                 focus:outline-none resize-none"
-                        rows={2}
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleReturn(game.id)}
-                          className="px-4 py-2 bg-amber-700 rounded-lg hover:bg-amber-600
-                                   transition-colors text-amber-100 font-medieval"
-                        >
-                          Confirm Return
-                        </button>
-                        <button
-                          onClick={() => setReturningGame(null)}
-                          className="px-4 py-2 bg-amber-900/50 rounded-lg hover:bg-amber-900
-                                   transition-colors text-amber-100 font-medieval"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setReturningGame(game.id)}
-                      className="px-4 py-2 bg-amber-900/80 rounded-lg hover:bg-amber-800 
-                               transition-colors text-amber-100 font-medieval"
-                    >
-                      Return Game
-                    </button>
-                  )
-                )}
-              </div>
-            </div>
-          ))}
+              <X size={16} />
+            </button>
+            <BorrowingProcess
+              borrowRequestId={selectedRequestId}
+              mode="borrowed"
+              onClose={() => {
+                setShowBorrowingProcess(false);
+                setSelectedRequestId(null);
+                fetchBorrowedGames();
+              }}
+              onStatusChange={fetchBorrowedGames}
+            />
+          </div>
         </div>
       )}
     </div>

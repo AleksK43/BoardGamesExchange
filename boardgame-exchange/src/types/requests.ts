@@ -34,6 +34,7 @@ export interface GameOwner {
     createdDate: string;
     acceptDate: string | null;
     returnDate: string | null;
+    comment?: string;
   }
   
   export interface BorrowReturnDTO {

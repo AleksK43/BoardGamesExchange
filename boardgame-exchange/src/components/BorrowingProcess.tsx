@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { 
   Clock, 
   Check, 
@@ -20,8 +20,28 @@ import type { BorrowGameRequestDTO } from '../types/requests';
 import {
   BorrowingProcessProps,
   ProcessStep,
-  ReturnRating
 } from '../types/borrowing';
+
+type RequestStatus = 'pending' | 'accepted' | 'return_initiated' | 'completed';
+
+interface RatingData {
+  gameRating: number;
+  ownerRating: number;
+  borrowerRating: number;
+  gameComment: string;
+  ownerComment: string;
+  borrowerComment: string;
+}
+
+const getRequestStatus = (request: BorrowGameRequestDTO | null): RequestStatus => {
+  if (!request) return 'pending';
+  if (request.returnDate) return 'completed';
+  if (request.acceptDate) {
+    if (request.comment) return 'return_initiated';
+    return 'accepted';
+  }
+  return 'pending';
+};
 
 const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
   gameId,
@@ -35,11 +55,13 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
   const [loading, setLoading] = useState(false);
   const [borrowRequest, setBorrowRequest] = useState<BorrowGameRequestDTO | null>(null);
   const [processStep, setProcessStep] = useState<ProcessStep>('request');
-  const [returnRating, setReturnRating] = useState<ReturnRating>({
+  const [ratingData, setRatingData] = useState<RatingData>({
     gameRating: 5,
     ownerRating: 5,
+    borrowerRating: 5,
     gameComment: '',
-    ownerComment: ''
+    ownerComment: '',
+    borrowerComment: ''
   });
 
   useEffect(() => {
@@ -48,7 +70,6 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
       
       try {
         setLoading(true);
-        // Pobierz requesty zarówno właściciela jak i użytkownika
         const [ownerRequests, userRequests] = await Promise.all([
           gameService.getBorrowRequests(),
           gameService.getMyBorrowRequests()
@@ -59,10 +80,10 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
         
         if (request) {
           setBorrowRequest(request);
-          if (request.acceptDate && !request.returnDate) {
-            setProcessStep('accepted');
-          } else if (request.returnDate) {
+          if (request.returnDate) {
             setProcessStep('return');
+          } else if (request.acceptDate) {
+            setProcessStep('accepted');
           }
         }
       } catch (error) {
@@ -77,6 +98,7 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
   }, [borrowRequestId]);
 
   const isBorrower = borrowRequest?.borrowedToUser.id === user?.id;
+  const isOwner = borrowRequest?.boardGame.owner.id === user?.id;
 
   const handleRequestBorrow = async () => {
     if (!gameId) return;
@@ -87,7 +109,6 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
       showNotification('success', 'Borrow request sent successfully');
       onStatusChange?.();
       onClose();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       showNotification('error', 'Failed to send borrow request');
     } finally {
@@ -104,7 +125,6 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
       showNotification('success', 'Borrow request accepted');
       setProcessStep('accepted');
       onStatusChange?.();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       showNotification('error', 'Failed to accept request');
     } finally {
@@ -121,7 +141,6 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
       showNotification('success', 'Request rejected');
       onClose();
       onStatusChange?.();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       showNotification('error', 'Failed to reject request');
     } finally {
@@ -129,30 +148,49 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
     }
   };
 
-  const handleReturnGame = async () => {
+  const handleInitiateReturn = async () => {
     if (!borrowRequestId || !isBorrower || !borrowRequest) return;
 
     try {
       setLoading(true);
-
-      // Return game and rate it
+      // Ocena gry i właściciela
       await gameService.returnGame(borrowRequestId, {
-        comment: returnRating.gameComment,
-        rating: returnRating.gameRating
+        comment: ratingData.gameComment,
+        rating: ratingData.gameRating
       });
 
-      // Rate the owner
+      // Ocena właściciela
       await gameService.rateUser(borrowRequest.boardGame.owner.id, {
-        comment: returnRating.ownerComment,
-        rating: returnRating.ownerRating
+        comment: ratingData.ownerComment,
+        rating: ratingData.ownerRating
       });
 
-      showNotification('success', 'Game returned and rated successfully');
+      showNotification('success', 'Return initiated and reviews submitted');
       onStatusChange?.();
       onClose();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      showNotification('error', 'Failed to return game');
+      showNotification('error', 'Failed to initiate return');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOwnerConfirmReturn = async () => {
+    if (!borrowRequestId || !borrowRequest) return;
+
+    try {
+      setLoading(true);
+      // Ocena wypożyczającego
+      await gameService.rateUser(borrowRequest.borrowedToUser.id, {
+        comment: ratingData.borrowerComment,
+        rating: ratingData.borrowerRating
+      });
+
+      showNotification('success', 'Return confirmed and borrower rated');
+      onStatusChange?.();
+      onClose();
+    } catch (error) {
+      showNotification('error', 'Failed to confirm return');
     } finally {
       setLoading(false);
     }
@@ -183,7 +221,7 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
     const owner = borrowRequest.boardGame.owner;
     return (
       <div className="space-y-4 mt-4 p-4 bg-amber-900/30 rounded-lg border border-amber-500/30">
-        <h4 className="font-medieval text-amber-200">Owner Contact Information:</h4>
+        <h4 className="font-medieval text-amber-200">Contact Information:</h4>
         {owner.phone && (
           <div className="flex items-center gap-2 text-amber-100">
             <Phone className="w-4 h-4" />
@@ -208,12 +246,12 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
           <Dice1 className="w-5 h-5 text-amber-400" />
           <h4 className="font-medieval text-lg text-amber-100">Rate the Game</h4>
         </div>
-        {renderRatingStars(returnRating.gameRating, (rating) => 
-          setReturnRating(prev => ({ ...prev, gameRating: rating }))
+        {renderRatingStars(ratingData.gameRating, (rating) => 
+          setRatingData(prev => ({ ...prev, gameRating: rating }))
         )}
         <textarea
-          value={returnRating.gameComment}
-          onChange={(e) => setReturnRating(prev => ({ ...prev, gameComment: e.target.value }))}
+          value={ratingData.gameComment}
+          onChange={(e) => setRatingData(prev => ({ ...prev, gameComment: e.target.value }))}
           placeholder="How was the game? Share your experience..."
           className="mt-4 w-full bg-amber-900/20 text-amber-100 rounded-lg px-4 py-2 
                     border border-amber-900/30 focus:border-amber-500 
@@ -227,18 +265,38 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
           <User className="w-5 h-5 text-amber-400" />
           <h4 className="font-medieval text-lg text-amber-100">Rate the Owner</h4>
         </div>
-        {renderRatingStars(returnRating.ownerRating, (rating) => 
-          setReturnRating(prev => ({ ...prev, ownerRating: rating }))
+        {renderRatingStars(ratingData.ownerRating, (rating) => 
+          setRatingData(prev => ({ ...prev, ownerRating: rating }))
         )}
         <textarea
-          value={returnRating.ownerComment}
-          onChange={(e) => setReturnRating(prev => ({ ...prev, ownerComment: e.target.value }))}
+          value={ratingData.ownerComment}
+          onChange={(e) => setRatingData(prev => ({ ...prev, ownerComment: e.target.value }))}
           placeholder="How was your experience with the owner?"
           className="mt-4 w-full bg-amber-900/20 text-amber-100 rounded-lg px-4 py-2 
                     border border-amber-900/30 focus:border-amber-500 
                     focus:outline-none min-h-[80px]"
         />
       </div>
+    </div>
+  );
+
+  const renderBorrowerRatingForm = () => (
+    <div className="p-4 bg-amber-900/20 rounded-lg border border-amber-900/30">
+      <div className="flex items-center gap-2 mb-4">
+        <User className="w-5 h-5 text-amber-400" />
+        <h4 className="font-medieval text-lg text-amber-100">Rate the Borrower</h4>
+      </div>
+      {renderRatingStars(ratingData.borrowerRating, (rating) => 
+        setRatingData(prev => ({ ...prev, borrowerRating: rating }))
+      )}
+      <textarea
+        value={ratingData.borrowerComment}
+        onChange={(e) => setRatingData(prev => ({ ...prev, borrowerComment: e.target.value }))}
+        placeholder="How was your experience with the borrower?"
+        className="mt-4 w-full bg-amber-900/20 text-amber-100 rounded-lg px-4 py-2 
+                  border border-amber-900/30 focus:border-amber-500 
+                  focus:outline-none min-h-[80px]"
+      />
     </div>
   );
 
@@ -353,19 +411,25 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
               </div>
               <div>
                 <h3 className="font-medieval text-lg text-amber-100">
-                  Request Accepted
+                  {getRequestStatus(borrowRequest) === 'return_initiated' 
+                    ? "Return Initiated"
+                    : "Request Accepted"}
                 </h3>
                 <p className="text-amber-200/70 text-sm">
-                  {isBorrower ? 
-                    'Your borrow request has been accepted. You can now contact the owner.' :
-                    'You have accepted this borrow request.'}
+                  {isBorrower 
+                    ? getRequestStatus(borrowRequest) === 'return_initiated'
+                      ? 'Waiting for owner to confirm return'
+                      : 'Your borrow request has been accepted. You can now contact the owner.'
+                    : getRequestStatus(borrowRequest) === 'return_initiated'
+                      ? 'The borrower has initiated return. Please confirm when you receive the game.'
+                      : 'You have accepted this borrow request.'}
                 </p>
               </div>
             </div>
 
             {renderContactInfo()}
 
-            {isBorrower && (
+            {isBorrower && getRequestStatus(borrowRequest) === 'accepted' && (
               <div className="flex justify-end gap-4">
                 <button
                   onClick={() => setProcessStep('return')}
@@ -374,7 +438,21 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
                            transition-colors font-medieval"
                 >
                   <MessageCircle className="w-5 h-5" />
-                  <span>Return Game</span>
+                  <span>Initiate Return</span>
+                </button>
+              </div>
+            )}
+
+            {isOwner && getRequestStatus(borrowRequest) === 'return_initiated' && (
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => setProcessStep('return')}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-700 
+                           hover:bg-green-600 text-green-100 rounded-lg 
+                           transition-colors font-medieval"
+                >
+                  <Check className="w-5 h-5" />
+                  <span>Confirm Return</span>
                 </button>
               </div>
             )}
@@ -382,58 +460,116 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
         ) : null;
 
       case 'return':
-        return borrowRequest && isBorrower ? (
-          <div className="space-y-6">
-            <div className="flex items-center gap-4 p-4 bg-amber-900/20 rounded-lg 
-                         border border-amber-900/30">
-              <div className="w-12 h-12 rounded-full bg-amber-900/50 flex items-center 
-                          justify-center">
-                <MessageCircle className="w-6 h-6 text-amber-400" />
-              </div>
-              <div>
-                <h3 className="font-medieval text-lg text-amber-100">
-                  Return Game
-                </h3>
-                <p className="text-amber-200/70 text-sm">
-                  Please rate both the game and the owner
-                </p>
-              </div>
-            </div>
+        if (borrowRequest) {
+          if (isBorrower && getRequestStatus(borrowRequest) === 'accepted') {
+            return (
+              <div className="space-y-6">
+                <div className="flex items-center gap-4 p-4 bg-amber-900/20 rounded-lg 
+                             border border-amber-900/30">
+                  <div className="w-12 h-12 rounded-full bg-amber-900/50 flex items-center 
+                              justify-center">
+                    <MessageCircle className="w-6 h-6 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-medieval text-lg text-amber-100">
+                      Initiate Game Return
+                    </h3>
+                    <p className="text-amber-200/70 text-sm">
+                      Please rate both the game and the owner
+                    </p>
+                  </div>
+                </div>
 
-            {renderReturnForm()}
+                {renderReturnForm()}
 
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={() => setProcessStep('accepted')}
-                className="px-4 py-2 text-amber-400 hover:text-amber-300 
-                         transition-colors font-medieval"
-              >
-                Back
-              </button>
-              <button
-                onClick={handleReturnGame}
-                disabled={loading || !returnRating.gameComment || !returnRating.ownerComment}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-700 
-                         hover:bg-amber-600 text-amber-100 rounded-lg 
-                         transition-colors font-medieval disabled:opacity-50 
-                         disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-amber-100 
-                                border-t-transparent rounded-full animate-spin" />
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-5 h-5" />
-                    <span>Submit & Return</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        ) : null;
+                <div className="flex justify-end gap-4">
+                  <button
+                    onClick={() => setProcessStep('accepted')}
+                    className="px-4 py-2 text-amber-400 hover:text-amber-300 
+                             transition-colors font-medieval"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleInitiateReturn}
+                    disabled={loading || !ratingData.gameComment || !ratingData.ownerComment}
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-700 
+                             hover:bg-amber-600 text-amber-100 rounded-lg 
+                             transition-colors font-medieval disabled:opacity-50 
+                             disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-amber-100 
+                                    border-t-transparent rounded-full animate-spin" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-5 h-5" />
+                        <span>Submit Return & Reviews</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          } else if (isOwner && getRequestStatus(borrowRequest) === 'return_initiated') {
+            return (
+              <div className="space-y-6">
+                <div className="flex items-center gap-4 p-4 bg-amber-900/20 rounded-lg 
+                             border border-amber-900/30">
+                  <div className="w-12 h-12 rounded-full bg-amber-900/50 flex items-center 
+                              justify-center">
+                    <MessageCircle className="w-6 h-6 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-medieval text-lg text-amber-100">
+                      Confirm Return & Rate Borrower
+                    </h3>
+                    <p className="text-amber-200/70 text-sm">
+                      Please confirm you received the game and rate the borrower
+                    </p>
+                  </div>
+                </div>
+
+                {renderBorrowerRatingForm()}
+
+                <div className="flex justify-end gap-4">
+                  <button
+                    onClick={() => setProcessStep('accepted')}
+                    className="px-4 py-2 text-amber-400 hover:text-amber-300 
+                             transition-colors font-medieval"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleOwnerConfirmReturn}
+                    disabled={loading || !ratingData.borrowerComment}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-700 
+                             hover:bg-green-600 text-green-100 rounded-lg 
+                             transition-colors font-medieval disabled:opacity-50 
+                             disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-green-100 
+                                    border-t-transparent rounded-full animate-spin" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-5 h-5" />
+                        <span>Confirm Return & Submit Rating</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          }
+        }
+        return null;
 
       default:
         return null;
