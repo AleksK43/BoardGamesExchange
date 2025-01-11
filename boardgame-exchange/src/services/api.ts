@@ -52,27 +52,32 @@ export const gameService = {
 
   getBorrowRequests: async (): Promise<BorrowGameRequestDTO[]> => {
     try {
-      const response = await api.get('/board-game/borrow-request/games');
+      console.log('Fetching all borrow requests');
+      const response = await api.get('/board-game/borrow-request/my');
+      console.log('All borrow requests:', response.data);
       return response.data;
     } catch (error) {
       console.error('Failed to fetch borrow requests:', error);
       throw error;
     }
   },
-
   getMyBorrowRequests: async (): Promise<BorrowGameRequestDTO[]> => {
     try {
-      const response = await api.get('/board-game/borrow-request/my');
+      console.log('Calling borrowed games endpoint');
+      const response = await api.get('/board-game/borrow-request/games');
+      console.log('Response from borrowed games:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Failed to fetch my borrow requests:', error);
+      console.error('Failed to fetch borrowed games:', error);
       throw error;
     }
   },
 
-  acceptBorrowRequest: async (borrowRequestId: number): Promise<void> => {
+  acceptBorrowRequest: async (borrowRequestId: number): Promise<BorrowGameRequestDTO> => {
     try {
-      await api.put(`/board-game/borrow-request/${borrowRequestId}/agree`);
+      const response = await api.put(`/board-game/borrow-request/${borrowRequestId}/agree`);
+      console.log('Accept response:', response.data);
+      return response.data;
     } catch (error) {
       console.error('Failed to accept borrow request:', error);
       throw error;

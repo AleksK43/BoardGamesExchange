@@ -10,20 +10,20 @@ interface GameCardProps {
   onClick?: (game: GameCardData) => void;
 }
 
+const formatDate = (dateString: string) => {
+  return format(new Date(dateString), 'd MMM yyyy', { locale: pl });
+};
+
+const getDifficultyIcon = (difficulty: string) => {
+  switch (difficulty.toLowerCase()) {
+    case 'easy':
+      return <Shield className="w-4 h-4" />;
+    default:
+      return <Swords className="w-4 h-4" />;
+  }
+};
+
 const GameCard: React.FC<GameCardProps> = ({ game, onClick }) => {
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'd MMM yyyy', { locale: pl });
-  };
-
-  const getDifficultyIcon = (difficulty: string) => {
-    switch (difficulty.toLowerCase()) {
-      case 'easy':
-        return <Shield className="w-4 h-4" />;
-      default:
-        return <Swords className="w-4 h-4" />;
-    }
-  };
-
   return (
     <div 
       onClick={() => onClick?.(game)}
@@ -62,52 +62,56 @@ const GameCard: React.FC<GameCardProps> = ({ game, onClick }) => {
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-4">
+      <div className="p-3 flex flex-col h-[380px]">
         {/* Title */}
-        <h3 className="font-medieval text-xl text-amber-100 leading-tight
-                     group-hover:text-amber-400 transition-colors line-clamp-1">
+        <h3 className="font-medieval text-lg text-amber-100 leading-tight
+                     group-hover:text-amber-400 transition-colors line-clamp-1 mb-3">
           {game.title}
         </h3>
 
-        {/* Description */}
-        <p className="font-crimson text-amber-200/70 text-sm line-clamp-2">
-          {game.description}
-        </p>
+        {/* Description with fixed height */}
+        <div className="h-14 mb-3">
+          <p className="font-crimson text-amber-200/70 text-xs line-clamp-2">
+            {game.description}
+          </p>
+        </div>
 
-        {/* Game Details */}
-        <div className="space-y-2 pt-2 border-t border-amber-900/30">
-          {/* Players */}
-          <div className="flex items-center gap-2 text-amber-300/70">
-            <Users className="w-4 h-4" />
-            <span className="text-sm font-crimson">{game.numberOfPlayers} players</span>
-          </div>
+        {/* Game Details with flex-grow to push content to bottom */}
+        <div className="flex-grow">
+          <div className="space-y-1 pt-2 border-t border-amber-900/30">
+            {/* Players */}
+            <div className="flex items-center gap-2 text-amber-300/70">
+              <Users className="w-3 h-3" />
+              <span className="text-xs font-crimson">{game.numberOfPlayers} players</span>
+            </div>
 
-          {/* Location */}
-          <div className="flex items-center gap-2 text-amber-300/70">
-            <MapPin className="w-4 h-4" />
-            <span className="text-sm font-crimson">{game.owner.city}</span>
-          </div>
+            {/* Location */}
+            <div className="flex items-center gap-2 text-amber-300/70">
+              <MapPin className="w-3 h-3" />
+              <span className="text-xs font-crimson">{game.owner.city}</span>
+            </div>
 
-          {/* Availability */}
-          <div className="flex items-center gap-2 text-amber-300/70">
-            <Calendar className="w-4 h-4" />
-            <span className="text-xs font-crimson">
-              {formatDate(game.availableFrom)} - {formatDate(game.availableTo)}
-            </span>
+            {/* Availability */}
+            <div className="flex items-center gap-2 text-amber-300/70">
+              <Calendar className="w-3 h-3" />
+              <span className="text-[10px] font-crimson">
+                {formatDate(game.availableFrom)} - {formatDate(game.availableTo)}
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Owner Info */}
-        <div className="pt-3 border-t border-amber-900/30">
+        <div className="pt-2 border-t border-amber-900/30 mt-auto">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-600 to-amber-800 
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-600 to-amber-800 
                           flex items-center justify-center text-amber-100 font-medieval
-                          border border-amber-500/30">
+                          border border-amber-500/30 flex-shrink-0 text-xs">
               {game.owner.name.charAt(0)}
             </div>
-            <div>
-              <div className="text-sm text-amber-100">{game.owner.name}</div>
-              <div className="text-xs text-amber-400/70">Game Master</div>
+            <div className="flex flex-col justify-center">
+              <div className="text-xs text-amber-100 leading-tight">{game.owner.name}</div>
+              <div className="text-[10px] text-amber-400/70 leading-tight">Game Master</div>
             </div>
           </div>
         </div>

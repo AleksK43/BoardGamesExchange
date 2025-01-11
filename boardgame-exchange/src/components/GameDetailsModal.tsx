@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Users, MapPin, Calendar, Star, User, Crown, Book } from 'lucide-react';
+import { X, Users, MapPin, Calendar, Star, User, Crown, Book, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import type { GameCardData } from '../types/game';
 import type { GameReview, ReviewRating } from '../types/review';
@@ -35,6 +35,32 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
   const [showBorrowProcess, setShowBorrowProcess] = useState(false);
   const [isBorrowed, setIsBorrowed] = useState(false);
   const [borrowRequestId, setBorrowRequestId] = useState<number | undefined>();
+  
+  // Image gallery state
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  useEffect(() => {
+    // Reset image index when game changes
+    setCurrentImageIndex(0);
+  }, [game]);
+
+  const handleNextImage = () => {
+    if (!game || !game.images.length) return;
+    setCurrentImageIndex((prev) => 
+      prev === game.images.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  const handlePrevImage = () => {
+    if (!game || !game.images.length) return;
+    setCurrentImageIndex((prev) => 
+      prev === 0 ? game.images.length - 1 : prev - 1
+    );
+  };
+
+  const handleThumbnailClick = (index: number) => {
+    setCurrentImageIndex(index);
+  };
 
   useEffect(() => {
     const fetchGameData = async () => {
@@ -125,14 +151,72 @@ const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
               {/* Header Image */}
               <div className="relative h-96 overflow-hidden rounded-t-xl">
                 {game.images && game.images.length > 0 ? (
-                  <img
-                    src={game.images[0]}
-                    alt={game.title}
-                    className="w-full h-full object-cover"
-                  />
+                  <>
+                    <img
+                      src={game.images[currentImageIndex]}
+                      alt={`Slide ${currentImageIndex + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    
+                    {/* Navigation Arrows - show only if more than 1 image */}
+                    {game.images.length > 1 && (
+                      <>
+                        <button
+                          onClick={handlePrevImage}
+                          className="absolute left-4 top-1/2 -translate-y-1/2 z-20
+                                   bg-gradient-to-r from-amber-700/80 to-amber-800/80 
+                                   hover:from-amber-600/80 hover:to-amber-700/80
+                                   p-2 rounded-full text-amber-100
+                                   transition-all duration-300 transform 
+                                   hover:scale-110 shadow-lg border border-amber-500/30"
+                        >
+                          <ChevronLeft size={24} />
+                        </button>
+
+                        <button
+                          onClick={handleNextImage}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 z-20
+                                   bg-gradient-to-r from-amber-700/80 to-amber-800/80 
+                                   hover:from-amber-600/80 hover:to-amber-700/80
+                                   p-2 rounded-full text-amber-100
+                                   transition-all duration-300 transform 
+                                   hover:scale-110 shadow-lg border border-amber-500/30"
+                        >
+                          <ChevronRight size={24} />
+                        </button>
+
+                        {/* Thumbnail Navigation */}
+                        {game.images.length > 1 && (
+                          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20
+                                      flex space-x-2 bg-gradient-to-r from-amber-900/90 to-amber-800/90
+                                      rounded-full px-3 py-2 border border-amber-500/30
+                                      shadow-lg backdrop-blur-sm">
+                            {game.images.map((_, index) => (
+                              <button
+                                key={index}
+                                onClick={() => handleThumbnailClick(index)}
+                                className={`w-8 h-8 rounded-full border-2 transition-all duration-300 
+                                         overflow-hidden ${
+                                           currentImageIndex === index 
+                                             ? 'border-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]' 
+                                             : 'border-transparent opacity-60 hover:opacity-100'
+                                         }`}
+                              >
+                                <img 
+                                  src={game.images[index]} 
+                                  alt={`Thumbnail ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </>
                 ) : (
                   <div className="w-full h-full bg-gradient-to-b from-amber-900/20 to-amber-950/20 
-                               flex items-center justify-center">
+                                flex items-center justify-center">
                     <Book className="w-16 h-16 text-amber-500/50" />
                   </div>
                 )}
