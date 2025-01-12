@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
-import { Shield, Crown, UserMinus, UserPlus, User } from 'lucide-react';
+import { Crown, UserMinus, UserPlus } from 'lucide-react';
 import { adminService } from '../../../services/adminApi';
 import { useNotification } from '../../../providers/NotificationProvider';
 import { AdminUser } from '../../../types/admin';
@@ -39,6 +39,7 @@ const AdminManagement: React.FC = () => {
   useEffect(() => {
     fetchAdmins();
     fetchStandardUsers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDemote = async (userId: number) => {

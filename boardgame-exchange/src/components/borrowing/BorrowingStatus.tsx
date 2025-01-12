@@ -1,15 +1,65 @@
 import React from 'react';
-import { Clock, Check, CircleX, ArrowRightLeft, CalendarDays } from 'lucide-react';
+import { Clock, Check, CircleX, ArrowRightLeft, CalendarDays, Star } from 'lucide-react';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import type { BorrowGameRequestDTO } from '../../types/requests';
+import { useState } from 'react';
+import { gameService } from '../../services/api';
+import { useNotification } from '../../providers/NotificationProvider';
+import { isAxiosError } from 'axios';
 
-export interface BorrowStatusProps {
+
+interface BorrowStatusProps {
   request: BorrowGameRequestDTO;
   onStatusChange?: () => void;
 }
 
-export const BorrowStatus: React.FC<BorrowStatusProps> = ({ request, onStatusChange }) => {
+const BorrowStatus: React.FC<BorrowStatusProps> = ({ request, onStatusChange }) => {
+  const { showNotification } = useNotification();
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [showRatingForm, setShowRatingForm] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleReturn = async () => {
+    if (!showRatingForm) {
+      setShowRatingForm(true);
+      return;
+    }
+
+    if (!rating || rating < 1 || rating > 5) {
+      showNotification('error', 'Proszę wybrać ocenę (1-5)');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Najpierw potwierdzenie zwrotu
+      await gameService.confirmReturn(request.id, { rating, comment });
+      
+      // Potem ocena użytkownika
+      await gameService.rateUser({
+        reviewedUserId: request.borrowedToUser.id,
+        rating,
+        comment: comment.trim()
+      });
+
+      showNotification('success', 'Gra została zwrócona i użytkownik oceniony');
+      onStatusChange?.();
+    } catch (error) {
+      console.error('Return game error:', error);
+      if (isAxiosError(error)) {
+        const errorMessage = error.response?.status === 400 
+          ? 'Nieprawidłowe dane oceny'
+          : 'Nie udało się potwierdzić zwrotu';
+        showNotification('error', errorMessage);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getStatusInfo = () => {
     if (!request) {
       return {
@@ -24,7 +74,7 @@ export const BorrowStatus: React.FC<BorrowStatusProps> = ({ request, onStatusCha
 
     if (request.returnDate) {
       return {
-        icon: <Check className="h-6 w-6" />,
+        icon: <Check className="w-6 h-6" />,
         title: 'Game Returned',
         description: `Returned on ${format(new Date(request.returnDate), 'PP', { locale: pl })}`,
         bgClass: 'bg-green-900/20',
@@ -35,7 +85,7 @@ export const BorrowStatus: React.FC<BorrowStatusProps> = ({ request, onStatusCha
 
     if (request.acceptDate) {
       return {
-        icon: <ArrowRightLeft className="h-6 w-6" />,
+        icon: <ArrowRightLeft className="w-6 h-6" />,
         title: 'Borrow Active',
         description: `Borrowed since ${format(new Date(request.acceptDate), 'PP', { locale: pl })}`,
         bgClass: 'bg-amber-900/20',
@@ -45,7 +95,7 @@ export const BorrowStatus: React.FC<BorrowStatusProps> = ({ request, onStatusCha
     }
 
     return {
-      icon: <Clock className="h-6 w-6" />,
+      icon: <Clock className="w-6 h-6" />,
       title: 'Request Pending',
       description: `Requested on ${format(new Date(request.createdDate), 'PP', { locale: pl })}`,
       bgClass: 'bg-amber-900/20',
@@ -76,19 +126,41 @@ export const BorrowStatus: React.FC<BorrowStatusProps> = ({ request, onStatusCha
       </div>
 
       {request.acceptDate && !request.returnDate && (
-        <div className="mt-4 pt-4 border-t border-amber-900/30">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex items-center gap-2 text-sm text-amber-200/70">
-              <div className="w-2 h-2 rounded-full bg-green-500" />
-              <span>Currently borrowed</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-amber-200/70">
-              <div className="w-2 h-2 rounded-full bg-amber-500" />
-              <span>
-                {format(new Date(request.acceptDate), "'Borrowed on' PP", { locale: pl })}
-              </span>
-            </div>
-          </div>
+        <div className="mt-4 space-y-4">
+          {showRatingForm && (
+            <>
+              <div className="flex gap-2 justify-center">
+                {[1,2,3,4,5].map((value) => (
+                  <button
+                    key={value}
+                    onClick={() => setRating(value)}
+                    className={`p-2 ${rating >= value ? 'text-yellow-400' : 'text-gray-400'}`}
+                  >
+                    <Star fill={rating >= value ? 'currentColor' : 'none'} />
+                  </button>
+                ))}
+              </div>
+              
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Add coment for the user..."
+                className="w-full p-2 bg-amber-900/20 border border-amber-500/30 rounded-lg 
+                         text-amber-100 placeholder-amber-400/50"
+                rows={3}
+              />
+            </>
+          )}
+
+          <button
+            onClick={handleReturn}
+            className="w-full px-4 py-2 bg-gradient-to-r from-green-600 to-green-700
+                     hover:from-green-700 hover:to-green-800 text-amber-100 rounded-lg 
+                     transition-colors font-medieval"
+            disabled={loading || (showRatingForm && !rating)}
+          >
+            {showRatingForm ? 'Accept Return and Rating' : 'Accept Return'}
+          </button>
         </div>
       )}
     </div>

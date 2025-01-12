@@ -121,9 +121,9 @@ const GamesPage: React.FC = () => {
     setIsGameDetailsOpen(true);
   };
 
-  const handleContactOwner = () => {
-    showNotification('info', 'Contact functionality coming soon!');
-  };
+  // const handleContactOwner = () => {
+  //   showNotification('info', 'Contact functionality coming soon!');
+  // };
 
   const filteredGames = useMemo(() => {
     return games.filter(game => {
@@ -282,7 +282,7 @@ const GamesPage: React.FC = () => {
         game={selectedGame}
         isOpen={isGameDetailsOpen}
         onClose={() => setIsGameDetailsOpen(false)}
-        onContactOwner={handleContactOwner}
+        // onContactOwner={handleContactOwner}
       />
     </div>
   );

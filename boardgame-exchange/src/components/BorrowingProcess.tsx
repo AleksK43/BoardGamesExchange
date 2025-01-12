@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, ArrowRight, AlertTriangle, Phone, Mail, User } from 'lucide-react';
+import { useNotification } from '../providers/NotificationProvider';
 import { gameService } from '../services/api';
 import { useAuth } from '../providers/AuthProvider';
-import { useNotification } from '../providers/NotificationProvider';
-import { useBorrowNotifications, getBorrowStatus } from '../services/borrowNotifications';
+import { BorrowGameRequestDTO } from '../types/requests';
+import BorrowStatus from './borrowing/BorrowingStatus';
 import RatingForm from './borrowing/RatingForm';
-import { BorrowStatus } from './borrowing/BorrowingStatus';
-import { BorrowGameRequestDTO, GameOwner } from '../types/requests';
-
-
+import { Book, Scroll, Shield, Swords } from 'lucide-react';
 
 interface BorrowingProcessProps {
   gameId?: number;
@@ -31,11 +28,6 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
   const [borrowRequest, setBorrowRequest] = useState<BorrowGameRequestDTO | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
-  const { 
-    checkForNewRequests, 
-    checkForRequestUpdates, 
-    checkForReturnRequests 
-  } = useBorrowNotifications();
 
   useEffect(() => {
     const fetchBorrowRequest = async () => {
@@ -62,15 +54,9 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
     };
 
     fetchBorrowRequest();
-    
     const intervalId = setInterval(fetchBorrowRequest, 5000);
-    
     return () => clearInterval(intervalId);
   }, [borrowRequestId, showNotification]);
-
-  const isBorrower = borrowRequest?.borrowedToUser.id === user?.id;
-  const isOwner = borrowRequest?.boardGame.owner.id === user?.id;
-  const status = getBorrowStatus(borrowRequest);
 
   const handleRequestBorrow = async () => {
     if (!gameId || !user) return;
@@ -79,7 +65,6 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
       setLoading(true);
       await gameService.requestBorrow(gameId);
       showNotification('success', 'Borrow request sent successfully');
-      await checkForNewRequests(borrowRequest?.boardGame.owner.id || 0);
       onStatusChange?.();
       onClose();
     } catch {
@@ -91,35 +76,15 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
 
   const handleAcceptRequest = async () => {
     if (!borrowRequestId || !borrowRequest) return;
-  
+
     try {
       setLoading(true);
-      console.log('Accepting borrow request:', borrowRequestId);
       await gameService.acceptBorrowRequest(borrowRequestId);
-      console.log('Borrow request accepted');
-  
-      // Pobierz zaktualizowane dane
-      const [ownerRequests, userRequests] = await Promise.all([
-        gameService.getBorrowRequests(),
-        gameService.getMyBorrowRequests()
-      ]);
-      console.log('Updated requests:', { ownerRequests, userRequests });
-  
-      const updatedRequest = [...ownerRequests, ...userRequests]
-        .find(req => req.id === borrowRequestId);
-      console.log('Updated request:', updatedRequest);
-  
-      if (updatedRequest) {
-        setBorrowRequest(updatedRequest);
-      }
-      
       showNotification('success', 'Borrow request accepted');
-      
-      if (onStatusChange) {
-        onStatusChange();
-      }
-    } catch (error) {
-      console.error('Accept request error:', error);
+      onStatusChange?.();
+      onClose();
+    } catch (err) {
+      console.error('Accept request error:', err);
       showNotification('error', 'Failed to accept request');
     } finally {
       setLoading(false);
@@ -133,81 +98,163 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
       setLoading(true);
       await gameService.deleteBorrowRequest(borrowRequestId);
       showNotification('success', 'Request rejected');
-      await checkForRequestUpdates(borrowRequest.borrowedToUser.id);
-      onClose();
       onStatusChange?.();
-    } catch {
+      onClose();
+    } catch (err) {
+      console.error('Reject request error:', err);
       showNotification('error', 'Failed to reject request');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRatingSubmit = async () => {
+  const handleReturnGame = async () => {
     if (!borrowRequestId || !borrowRequest) return;
 
     try {
       setLoading(true);
-
-      if (isBorrower) {
-        await Promise.all([
-          gameService.returnGame(borrowRequestId, {
-            comment,
-            rating
-          }),
-          gameService.rateUser(borrowRequest.boardGame.owner.id, {
-            comment,
-            rating
-          })
-        ]);
-        await checkForReturnRequests(borrowRequest.boardGame.owner.id);
-        showNotification('success', 'Game return initiated and ratings submitted');
-      } else if (isOwner) {
-        // Owner rates borrower
-        await gameService.rateUser(borrowRequest.borrowedToUser.id, {
+      
+      await Promise.all([
+        gameService.returnGame(borrowRequestId, {
           comment,
           rating
-        });
-        showNotification('success', 'Borrower rated successfully');
-      }
+        }),
+        gameService.rateUser({
+          reviewedUserId: borrowRequest.boardGame.owner.id,
+          comment,
+          rating
+        })
+      ]);
       
+      showNotification('success', 'Game returned and rated successfully');
       onStatusChange?.();
       onClose();
-    } catch {
-      showNotification('error', 'Failed to submit rating');
+    } catch (err) {
+      console.error('Return game error:', err);
+      showNotification('error', 'Failed to return game');
     } finally {
       setLoading(false);
     }
   };
 
-  const renderContactInfo = () => {
-    if (!borrowRequest?.boardGame.owner) return null;
+  
 
-    const owner = borrowRequest.boardGame.owner;
-    return (
-      <div className="mt-4 space-y-4 p-4 bg-amber-900/30 rounded-lg border border-amber-500/30">
-        <div className="flex items-center gap-2">
-          <User className="w-5 h-5 text-amber-400" />
-          <h4 className="font-medieval text-lg text-amber-200">Contact Information</h4>
-        </div>
-        <div className="space-y-2">
-          {owner.phone && (
-            <div className="flex items-center gap-2 text-amber-100">
-              <Phone className="w-4 h-4 text-amber-400" />
-              <span>{owner.phone}</span>
-            </div>
-          )}
-          {owner.email && (
-            <div className="flex items-center gap-2 text-amber-100">
-              <Mail className="w-4 h-4 text-amber-400" />
-              <span>{owner.email}</span>
-            </div>
-          )}
+  // Renderowanie procesu wysyłania requestu
+  const renderRequestProcess = () => (
+    <div className="space-y-6">
+      <div className="bg-gradient-to-r from-amber-900/20 to-amber-950/20 
+                     rounded-lg border border-amber-900/30 p-6 relative overflow-hidden">
+        {/* Dekoracyjne elementy tła */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent 
+                     via-amber-500/20 to-transparent" />
+        <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent 
+                     via-amber-500/20 to-transparent" />
+        
+        <div className="flex items-start gap-6">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-600 to-amber-800
+                       border-2 border-amber-500/30 flex items-center justify-center
+                       shadow-lg shadow-amber-900/50">
+            <Scroll className="w-8 h-8 text-amber-100" />
+          </div>
+          
+          <div className="flex-1">
+            <h3 className="font-medieval text-xl text-amber-100 mb-2">
+              Request to Borrow
+            </h3>
+            <p className="text-amber-200/70 font-crimson">
+              Send a formal request to the keeper of this game. Your quest for borrowing shall begin once approved.
+            </p>
+          </div>
         </div>
       </div>
-    );
-  };
 
+      <div className="flex justify-end gap-4">
+        <button
+          onClick={onClose}
+          className="px-6 py-2 text-amber-400 hover:text-amber-300 transition-colors
+                   font-medieval border border-amber-900/30 rounded-lg
+                   hover:bg-amber-900/20"
+        >
+          Cancel Quest
+        </button>
+        <button
+          onClick={handleRequestBorrow}
+          disabled={loading}
+          className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r
+                   from-amber-600 to-amber-800 hover:from-amber-700 hover:to-amber-900 
+                   text-amber-100 rounded-lg transition-all duration-300 font-medieval
+                   disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105
+                   border border-amber-500/30 shadow-lg hover:shadow-amber-900/50"
+        >
+          {loading ? (
+            <>
+              <div className="w-5 h-5 border-2 border-amber-100 
+                           border-t-transparent rounded-full animate-spin" />
+              <span>Sending Request...</span>
+            </>
+          ) : (
+            <>
+              <Scroll size={20} />
+              <span>Send Request</span>
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+
+  // Renderowanie procesu zarządzania requestem
+  const renderManageProcess = () => (
+    <div className="space-y-6">
+      {borrowRequest && !borrowRequest.acceptDate && (
+        <div className="flex justify-end gap-4">
+          <button
+            onClick={handleRejectRequest}
+            disabled={loading}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r
+                     from-red-900 to-red-800 hover:from-red-800 hover:to-red-700
+                     text-red-100 rounded-lg transition-all duration-300 font-medieval
+                     border border-red-500/30 shadow-lg hover:shadow-red-900/50
+                     transform hover:scale-105"
+          >
+            {loading ? (
+              <div className="w-5 h-5 border-2 border-red-100 
+                           border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <Swords size={20} />
+                <span>Reject Request</span>
+              </>
+            )}
+          </button>
+          <button
+            onClick={handleAcceptRequest}
+            disabled={loading}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r
+                     from-amber-600 to-amber-800 hover:from-amber-700 hover:to-amber-900
+                     text-amber-100 rounded-lg transition-all duration-300 font-medieval
+                     border border-amber-500/30 shadow-lg hover:shadow-amber-900/50
+                     transform hover:scale-105"
+          >
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-amber-100 
+                             border-t-transparent rounded-full animate-spin" />
+                <span>Processing...</span>
+              </>
+            ) : (
+              <>
+                <Shield size={20} />
+                <span>Accept Request</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  // Sprawdzanie stanu ładowania
   if (loading && !borrowRequest) {
     return (
       <div className="flex justify-center py-8">
@@ -218,129 +265,65 @@ const BorrowingProcess: React.FC<BorrowingProcessProps> = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-8 bg-gradient-to-b from-[#2c1810] to-[#1a0f0f] 
+                   rounded-xl border border-amber-900/30 space-y-6
+                   shadow-[0_0_30px_rgba(0,0,0,0.3)]">
+      {/* Status wypożyczenia */}
       {borrowRequest && (
-        <BorrowStatus 
-          request={borrowRequest} 
-          onStatusChange={onStatusChange ? () => onStatusChange() : undefined} 
-        />
-      )}
-
-      {mode === 'request' && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-amber-900/20 
-                       to-amber-950/20 rounded-lg border border-amber-900/30">
-            <div className="w-12 h-12 rounded-full bg-amber-900/50 flex items-center 
-                        justify-center">
-              <AlertTriangle className="w-6 h-6 text-amber-400" />
-            </div>
-            <div>
-              <h3 className="font-medieval text-lg text-amber-100">
-                Request to Borrow
-              </h3>
-              <p className="text-amber-200/70 text-sm">
-                Send a request to the game owner to borrow this game.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-4">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-amber-400 hover:text-amber-300 
-                     transition-colors font-medieval"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleRequestBorrow}
-              disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r
-                     from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 
-                     text-amber-100 rounded-lg transition-colors font-medieval 
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-amber-100 
-                               border-t-transparent rounded-full animate-spin" />
-                  <span>Sending Request...</span>
-                </>
-              ) : (
-                <>
-                  <ArrowRight className="w-5 h-5" />
-                  <span>Send Request</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {mode === 'manage' && borrowRequest && status === 'pending' && (
-        <div className="flex justify-end gap-4">
-          <button
-            onClick={handleRejectRequest}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-red-900/80 
-                   hover:bg-red-800 text-red-100 rounded-lg 
-                   transition-colors font-medieval"
-          >
-            <X className="w-5 h-5" />
-            <span>Reject</span>
-          </button>
-          <button
-            onClick={handleAcceptRequest}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-green-900/80 
-                   hover:bg-green-800 text-green-100 rounded-lg 
-                   transition-colors font-medieval"
-          >
-            <Check className="w-5 h-5" />
-            <span>Accept</span>
-          </button>
-        </div>
-      )}
-
-      {status === 'accepted' && renderContactInfo()}
-
-      {((mode === 'borrowed' && status === 'accepted') || 
-        (mode === 'manage' && status === 'return_initiated')) && (
-        <div className="space-y-4">
-          <RatingForm
-            type={mode === 'borrowed' ? 'game' : 'user'}
-            rating={rating}
-            comment={comment}
-            onRatingChange={setRating}
-            onCommentChange={setComment}
+        <div className="mb-8">
+          <BorrowStatus 
+            request={borrowRequest} 
+            onStatusChange={onStatusChange}
           />
-          
+        </div>
+      )}
+
+      {/* Renderowanie odpowiedniego widoku w zależności od trybu */}
+      {mode === 'request' && renderRequestProcess()}
+      {mode === 'manage' && renderManageProcess()}
+      
+      {/* Proces zwrotu i oceny */}
+      {mode === 'borrowed' && borrowRequest?.acceptDate && !borrowRequest?.returnDate && (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-amber-900/20 to-amber-950/20 
+                       rounded-lg border border-amber-900/30 p-6">
+            <RatingForm
+              type="game"
+              rating={rating}
+              comment={comment}
+              onRatingChange={setRating}
+              onCommentChange={setComment}
+            />
+          </div>
+
           <div className="flex justify-end gap-4">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-amber-400 hover:text-amber-300 
-                     transition-colors font-medieval"
+              className="px-6 py-3 text-amber-400 hover:text-amber-300 transition-colors
+                     font-medieval border border-amber-900/30 rounded-lg
+                     hover:bg-amber-900/20"
             >
               Cancel
             </button>
             <button
-              onClick={handleRatingSubmit}
+              onClick={handleReturnGame}
               disabled={loading || !comment.trim()}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r 
-                     from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800
-                     text-amber-100 rounded-lg transition-colors font-medieval 
-                     disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r
+                     from-amber-600 to-amber-800 hover:from-amber-700 hover:to-amber-900
+                     text-amber-100 rounded-lg transition-all duration-300 font-medieval
+                     disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105
+                     border border-amber-500/30 shadow-lg hover:shadow-amber-900/50"
             >
               {loading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-amber-100 
                                border-t-transparent rounded-full animate-spin" />
-                  <span>Submitting...</span>
+                  <span>Processing...</span>
                 </>
               ) : (
                 <>
-                  <Check className="w-5 h-5" />
-                  <span>Submit Rating</span>
+                  <Book size={20} />
+                  <span>Complete Return</span>
                 </>
               )}
             </button>

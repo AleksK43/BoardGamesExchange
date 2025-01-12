@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Edit2, Trash2, Scroll, PlusCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../../../providers/AuthProvider';
 import { useNotification } from '../../../providers/NotificationProvider';
 import { useLoading } from '../../../providers/LoadingProvider';
@@ -9,6 +8,7 @@ import GameCard from '../../../components/GameCard';
 import GameDetailsModal from '../../../components/GameDetailsModal';
 import EditGameModal from '../../../components/EditGameModal';
 import { Game, GameCardData } from '../../../types/game';
+import { useNavigate, Link } from 'react-router-dom';
 
 const MyGames: React.FC = () => {
   const { user } = useAuth();
@@ -18,6 +18,7 @@ const MyGames: React.FC = () => {
   const [selectedGame, setSelectedGame] = useState<GameCardData | null>(null);
   const [isGameDetailsOpen, setIsGameDetailsOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   const mapToGameCardData = async (game: Game): Promise<GameCardData> => {
     try {
@@ -118,17 +119,17 @@ const MyGames: React.FC = () => {
         <p className="text-amber-200/70 font-crimson text-lg mb-6">
           Begin your journey by adding your first game to your collection.
         </p>
-        <Link
-          to="/app/games/add"
-          className="inline-flex items-center gap-2 px-6 py-3 
+        <button 
+          onClick={() => navigate('/app/games/manage/add')}
+          className="inline-flex items-center gap-2 px-4 py-2 
                    bg-gradient-to-r from-amber-600 to-amber-700
                    hover:from-amber-700 hover:to-amber-800
                    text-amber-100 rounded-lg transition-colors font-medieval
                    shadow-lg hover:shadow-amber-900/50"
         >
-          <PlusCircle size={20} />
-          <span>Add Your First Treasure</span>
-        </Link>
+          <PlusCircle size={18} />
+          <span>Add New Treasure</span>
+        </button>
       </div>
     );
   }

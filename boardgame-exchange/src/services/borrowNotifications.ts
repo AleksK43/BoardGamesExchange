@@ -6,7 +6,7 @@ import { BorrowGameRequestDTO } from '../types/requests';
 export const useBorrowNotifications = () => {
   const { showNotification } = useNotification();
 
-  const checkForNewRequests = async (userId: number) => {
+  const checkForNewRequests = async (_id: number) => {
     try {
       const requests = await gameService.getBorrowRequests();
       const newRequests = requests.filter(req => !req.acceptDate && !req.returnDate);
@@ -22,7 +22,7 @@ export const useBorrowNotifications = () => {
     }
   };
 
-  const checkForRequestUpdates = async (userId: number) => {
+  const checkForRequestUpdates = async (_userId: number) => {
     try {
       const requests = await gameService.getMyBorrowRequests();
       
@@ -57,7 +57,7 @@ export const useBorrowNotifications = () => {
     }
   };
 
-  const checkForReturnConfirmations = async (userId: number) => {
+  const checkForReturnConfirmations = async (_userId: number) => {
     try {
       const requests = await gameService.getMyBorrowRequests();
       const confirmedReturns = requests.filter(req => 

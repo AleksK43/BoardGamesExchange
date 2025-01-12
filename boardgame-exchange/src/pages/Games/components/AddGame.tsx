@@ -1,15 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { PlusCircle, Trash2, Library, Clock, Book } from 'lucide-react';
-import GameForm, { GameFormData } from './GameForm'; 
-import MyGames from './MyGames';
-import TrashGames from './TrashGames';
-import BorrowRequests from './BorrowRequests';
-import MyBorrowedGames from './MyBorrowedGames';
-
-type ActiveView = 'add' | 'my-games' | 'requests' | 'borrowed' | 'trash';
+import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import GameForm, { GameFormData } from './GameForm';
 
 const AddGame: React.FC = () => {
-  const [activeView, setActiveView] = useState<ActiveView>('add');
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (data: GameFormData) => {
     try {
@@ -23,55 +19,38 @@ const AddGame: React.FC = () => {
     {
       title: 'Add Game',
       icon: <PlusCircle size={20} />,
-      view: 'add' as ActiveView,
+      path: 'add',
       description: 'Add a new game to your collection'
     },
     {
       title: 'My Games',
       icon: <Library size={20} />,
-      view: 'my-games' as ActiveView,
+      path: 'my-games',
       description: 'Manage your game collection'
     },
     {
       title: 'Borrow Requests',
       icon: <Clock size={20} />,
-      view: 'requests' as ActiveView,
+      path: 'requests',
       description: 'Manage borrow requests for your games'
     },
     {
       title: 'Borrowed Games',
       icon: <Book size={20} />,
-      view: 'borrowed' as ActiveView,
+      path: 'borrowed',
       description: 'View and manage games you borrowed'
     },
     {
       title: 'Trash',
       icon: <Trash2 size={20} />,
-      view: 'trash' as ActiveView,
+      path: 'trash',
       description: 'View deleted games'
     }
   ];
 
-  const renderContent = () => {
-    switch (activeView) {
-      case 'add':
-        return (
-          <>
-            <h1 className="text-2xl font-medieval text-amber-100 mb-8">Add New Game</h1>
-            <GameForm onSubmit={handleSubmit} />
-          </>
-        );
-      case 'my-games':
-        return <MyGames />;
-      case 'requests':
-        return <BorrowRequests />;
-      case 'borrowed':
-        return <MyBorrowedGames />;
-      case 'trash':
-        return <TrashGames />;
-      default:
-        return null;
-    }
+  const getActiveRoute = () => {
+    const pathParts = location.pathname.split('/');
+    return pathParts[pathParts.length - 1];
   };
 
   return (
@@ -81,17 +60,17 @@ const AddGame: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           {menuItems.map((item) => (
             <button
-              key={item.view}
-              onClick={() => setActiveView(item.view)}
+              key={item.path}
+              onClick={() => navigate(`/app/games/manage/${item.path}`)}
               className={`flex flex-col items-center gap-2 px-4 py-6 rounded-lg 
-                        transition-all duration-300 group ${
-                          activeView === item.view
-                            ? 'bg-amber-900/50 text-amber-100 border-2 border-amber-500/50'
-                            : 'bg-amber-900/20 text-amber-400 hover:bg-amber-900/30 hover:text-amber-300'
-                        }`}
+                transition-all duration-300 group ${
+                  getActiveRoute() === item.path
+                    ? 'bg-amber-900/50 text-amber-100 border-2 border-amber-500/50'
+                    : 'bg-amber-900/20 text-amber-400 hover:bg-amber-900/30 hover:text-amber-300'
+                }`}
             >
               <div className={`transform transition-transform duration-300 
-                           ${activeView === item.view ? 'scale-110' : 'group-hover:scale-110'}`}>
+                ${getActiveRoute() === item.path ? 'scale-110' : 'group-hover:scale-110'}`}>
                 {item.icon}
               </div>
               <span className="font-medieval text-lg">{item.title}</span>
@@ -104,8 +83,14 @@ const AddGame: React.FC = () => {
 
         {/* Content Area with Animation */}
         <div className="bg-gradient-to-b from-[#2c1810]/50 to-[#1a0f0f]/50 
-                     rounded-lg border border-amber-900/30 p-6 shadow-xl">
-          {renderContent()}
+          rounded-lg border border-amber-900/30 p-6 shadow-xl">
+          {getActiveRoute() === 'add' && (
+            <>
+              <h1 className="text-2xl font-medieval text-amber-100 mb-8">Add New Game</h1>
+              <GameForm onSubmit={handleSubmit} />
+            </>
+          )}
+          <Outlet />
         </div>
       </div>
     </div>

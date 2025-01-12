@@ -5,7 +5,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useNotification } from '../../providers/NotificationProvider';
 import { UserLevel } from '../../types/user';
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Menu, 
@@ -16,13 +16,12 @@ import {
   ChevronDown, 
   Scroll,
   Settings, 
-  Crown,
-  Shield
+  Crown
 } from 'lucide-react';
-
 
 const Navbar: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, user, logout } = useAuth();
   const { showNotification } = useNotification();
 
@@ -41,6 +40,15 @@ const Navbar: React.FC = () => {
 
   const isAdmin = user?.level === UserLevel.ADMIN;
   const isBasicUser = !user?.subscriptionUntil;
+
+  const getLinkClassName = (path: string) => {
+    return `font-medieval text-amber-100 px-4 py-2 rounded-lg 
+            hover:bg-amber-900/30 transition-all duration-200 
+            hover:text-amber-400 flex items-center gap-2 
+            ${location.pathname === path 
+              ? 'bg-amber-900/50 text-amber-400 border-2 border-amber-500/50' 
+              : ''}`;
+  };
 
   return (
     <>
@@ -62,9 +70,7 @@ const Navbar: React.FC = () => {
                 <>
                   <Link 
                     to="/app/games"
-                    className="font-medieval text-amber-100 px-4 py-2 rounded-lg 
-                             hover:bg-amber-900/30 transition-all duration-200 
-                             hover:text-amber-400 flex items-center gap-2"
+                    className={getLinkClassName('/app/games')}
                   >
                     <Dice1 size={20} />
                     <span>Magical Collection</span>
@@ -72,24 +78,20 @@ const Navbar: React.FC = () => {
 
                   <Link 
                     to="/app/games/manage"
-                    className="font-medieval text-amber-100 px-4 py-2 rounded-lg 
-                             hover:bg-amber-900/30 transition-all duration-200 
-                             hover:text-amber-400 flex items-center gap-2"
+                    className={getLinkClassName('/app/games/manage')}
                   >
                     <Scroll size={20} />
                     <span>Your Scrolls</span>
                   </Link>
 
                   {isAdmin && (
-                     <Link 
-                     to="/app/admin/panel"
-                     className="font-medieval text-amber-100 px-4 py-2 rounded-lg 
-                              hover:bg-amber-900/30 transition-all duration-200 
-                              hover:text-amber-400 flex items-center gap-2"
-                   >
-                     <Settings size={20} />
-                     <span>Master's Chamber</span>
-                   </Link>
+                    <Link 
+                      to="/app/admin/panel"
+                      className={getLinkClassName('/app/admin/panel')}
+                    >
+                      <Settings size={20} />
+                      <span>Master's Chamber</span>
+                    </Link>
                   )}
 
                   {isBasicUser && (
@@ -117,7 +119,7 @@ const Navbar: React.FC = () => {
                       {user?.subscriptionUntil ? (
                         <Crown size={20} className="text-amber-400" />
                       ) : (
-                        <Shield size={20} className="text-amber-100" />
+                        <User size={20} className="text-amber-100" />
                       )}
                       <span>{user?.email}</span>
                       <ChevronDown 
@@ -202,25 +204,37 @@ const Navbar: React.FC = () => {
                   <>
                     <Link
                       to="/app/games"
-                      className="block px-3 py-2 rounded-lg text-amber-100 hover:bg-amber-900/30
-                               transition-colors font-medieval"
+                      className={`block px-3 py-2 rounded-lg text-amber-100 hover:bg-amber-900/30
+                               transition-colors font-medieval ${
+                                 location.pathname === '/app/games' 
+                                   ? 'bg-amber-900/50 text-amber-400' 
+                                   : ''
+                               }`}
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Magical Collection
                     </Link>
                     <Link
                       to="/app/games/manage"
-                      className="block px-3 py-2 rounded-lg text-amber-100 hover:bg-amber-900/30
-                               transition-colors font-medieval"
+                      className={`block px-3 py-2 rounded-lg text-amber-100 hover:bg-amber-900/30
+                               transition-colors font-medieval ${
+                                 location.pathname === '/app/games/manage' 
+                                   ? 'bg-amber-900/50 text-amber-400' 
+                                   : ''
+                               }`}
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Your Scrolls
                     </Link>
                     {isAdmin && (
                       <Link
-                        to="/app/admin"
-                        className="block px-3 py-2 rounded-lg text-amber-100 hover:bg-amber-900/30
-                                 transition-colors font-medieval"
+                        to="/app/admin/panel"
+                        className={`block px-3 py-2 rounded-lg text-amber-100 hover:bg-amber-900/30
+                                 transition-colors font-medieval ${
+                                   location.pathname === '/app/admin/panel' 
+                                     ? 'bg-amber-900/50 text-amber-400' 
+                                     : ''
+                                 }`}
                         onClick={() => setIsMenuOpen(false)}
                       >
                         Master's Chamber

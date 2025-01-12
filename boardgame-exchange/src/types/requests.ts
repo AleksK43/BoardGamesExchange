@@ -9,9 +9,9 @@ export interface GameOwner {
     phone: string | null;
     avatarUrl: string | null;
     subscriptionUntil: string | null;
-  }
-  
-  export interface BoardGameRequest {
+}
+
+export interface BoardGameRequest {
     id: number;
     title: string;
     description: string;
@@ -25,20 +25,27 @@ export interface GameOwner {
     availableTo: string;
     deleted: boolean;
     borrowedToUser: GameOwner | null;
-  }
-  
-  export interface BorrowGameRequestDTO {
+}
+
+export interface BorrowGameRequestDTO {
     id: number;
     boardGame: BoardGameRequest;
     borrowedToUser: GameOwner;
     createdDate: string;
     acceptDate: string | null;
     returnDate: string | null;
+    status: string;
     comment?: string | null;
     rating?: number | null;
-  }
-  
-  export interface BorrowReturnDTO {
-    comment: string;
+}
+
+export interface BorrowReturnDTO {
     rating: number;
-  }
+    comment: string;
+}
+
+export interface ReviewRequest {
+    userId: number;
+    rating: number;
+    comment: string;
+}

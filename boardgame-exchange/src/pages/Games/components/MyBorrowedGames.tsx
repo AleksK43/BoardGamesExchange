@@ -22,57 +22,32 @@ const MyBorrowedGames: React.FC = () => {
     
     try {
       startLoading();
-      console.log('Current user:', user);
-      const response = await gameService.getMyBorrowRequests();
-      console.log('Raw response data:', response);
+      const response = await gameService.getBorrowRequests(); // Zmiana na getBorrowRequests
       
-      // Szczegółowe logowanie wszystkich requestów
-      response.forEach((req, index) => {
-        console.log(`Request ${index + 1}:`, {
-          requestId: req.id,
-          gameTitle: req.boardGame.title,
-          status: {
-            isAccepted: !!req.acceptDate,
-            isReturned: !!req.returnDate,
-          },
-          borrower: {
-            id: req.borrowedToUser.id,
-            name: req.borrowedToUser.firstname,
-          },
-          owner: {
-            id: req.boardGame.owner.id,
-            name: req.boardGame.owner.firstname,
-          },
-          dates: {
-            created: req.createdDate,
-            accepted: req.acceptDate,
-            returned: req.returnDate,
-          }
-        });
-      });
-      
-      // Filtrowanie aktywnych wypożyczeń
+      console.group('Borrowed Games Debug');
+      console.log('Raw response:', response);
+      console.log('User ID:', user.id);
+      console.groupEnd();
+  
       const activeBorrows = response.filter(req => {
-        const isBorrower = req.borrowedToUser.id === user.id;
-        const isOwner = req.boardGame.owner.id === user.id;
-        
-        console.log('Request filtering:', {
-          requestId: req.id,
+        const isCurrentUserBorrower = req.boardGame.borrowedToUser?.id === user.id;
+        const isAccepted = req.acceptDate !== null;
+        const isNotReturned = req.returnDate === null;
+  
+        console.log('Request Details:', {
           gameTitle: req.boardGame.title,
-          conditions: {
-            isAccepted: !!req.acceptDate,
-            isNotReturned: !req.returnDate,
-            isBorrower,
-            isOwner
-          }
+          borrowedToUserId: req.boardGame.borrowedToUser?.id,
+          currentUserId: user.id,
+          isCurrentUserBorrower,
+          isAccepted,
+          isNotReturned
         });
-        
-        return req.acceptDate && // zaakceptowane
-               !req.returnDate && // nie zwrócone
-               isBorrower; // użytkownik jest wypożyczającym
+  
+        return isCurrentUserBorrower && isAccepted && isNotReturned;
       });
+  
+      console.log('Filtered Active Borrows:', activeBorrows);
       
-      console.log('Final filtered games:', activeBorrows);
       setBorrowedGames(activeBorrows);
     } catch (error) {
       console.error('Failed to fetch borrowed games:', error);
@@ -84,7 +59,8 @@ const MyBorrowedGames: React.FC = () => {
 
   useEffect(() => {
     fetchBorrowedGames();
-    const intervalId = setInterval(fetchBorrowedGames, 5000);
+    // Odświeżamy co 5 sekund
+    const intervalId = setInterval(fetchBorrowedGames, 500000);
     return () => clearInterval(intervalId);
   }, [fetchBorrowedGames]);
 
@@ -92,7 +68,6 @@ const MyBorrowedGames: React.FC = () => {
     setSelectedRequestId(requestId);
     setShowBorrowingProcess(true);
   };
-  
 
   if (borrowedGames.length === 0) {
     return (
